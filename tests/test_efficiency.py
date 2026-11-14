@@ -49,6 +49,14 @@ class Size(unittest.TestCase):
         tsv = open(os.path.join(d, "ci/efficiency/size.tsv")).read()
         self.assertIn("a.gd::big\t86", tsv)
 
+    def test_next_funcs_header_is_not_charged(self):
+        import effgate
+        src = ("func a():\n\tpass\n\n# -- section --\n## doc of b\nfunc b():\n\t# inside b\n\tpass\n"
+               "# dedented comment inside b\n\tpass\n\n# trailing file comment\n").split("\n")
+        got = {name: (s, e) for name, s, e in effgate.functions(src)}
+        self.assertEqual(got["a"], (0, 1))
+        self.assertEqual(got["b"], (5, 9))
+
     def test_file_budget(self):
         d = project({"b.gd": "var x = 1\n" * 801})
         self.assertIn("b.gd", run("check-size.py", d)[1])

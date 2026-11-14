@@ -63,7 +63,10 @@ _FUNC = re.compile(r"^\s*(?:static\s+)?func\s+(\w+)\s*\(")
 def functions(lines):
     """[(name, first_line_index, last_line_index)] for every func, nested classes included.
     A body is every following line indented deeper than the func line (blank and comment
-    lines inside it count); its length is last-first+1 with trailing blanks trimmed."""
+    lines inside it count); its length is last-first+1 with trailing blanks trimmed.
+    A comment at the func's own indent or shallower is in the body only when deeper code
+    follows it; a run of them followed by the next func (its `##` doc, a section rule) is
+    not, or every function was charged its successor's header."""
     out = []
     n = len(lines)
     for i, line in enumerate(lines):
@@ -78,12 +81,24 @@ def functions(lines):
             if t.strip() == "":
                 j += 1
                 continue
-            if indent_of(t) <= base and not t.lstrip().startswith("#"):
-                break
+            if indent_of(t) <= base:
+                if not t.lstrip().startswith("#") or not _code_follows(lines, j + 1, base):
+                    break
             end = j
             j += 1
         out.append((m.group(1), i, end))
     return out
+
+
+def _code_follows(lines, j, base):
+    """Whether the first line from j on that is neither blank nor a comment at indent <= base
+    is indented deeper than base (so the comments before it sit inside the body)."""
+    while j < len(lines):
+        t = lines[j]
+        if t.strip() != "" and not (t.lstrip().startswith("#") and indent_of(t) <= base):
+            return indent_of(t) > base
+        j += 1
+    return False
 
 
 def load_baseline(path):
