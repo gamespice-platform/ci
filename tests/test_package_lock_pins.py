@@ -30,7 +30,10 @@ def write(path, text):
 
 
 def git(cwd, *args):
-    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
+    # CI runners have no git identity; the fixture commit needs one.
+    env = dict(os.environ, GIT_AUTHOR_NAME="fixture", GIT_AUTHOR_EMAIL="fixture@example.invalid",
+               GIT_COMMITTER_NAME="fixture", GIT_COMMITTER_EMAIL="fixture@example.invalid")
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, env=env)
 
 
 class PackageHostLock(unittest.TestCase):
