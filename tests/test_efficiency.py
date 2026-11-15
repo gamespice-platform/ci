@@ -1,4 +1,5 @@
 """Fixtures for the efficiency gates. Run: python3 -m unittest discover -s tests"""
+import json
 import os
 import subprocess
 import sys
@@ -338,6 +339,44 @@ class GateSelfTest(unittest.TestCase):
         code, out = run("check-frame-hazards.py", d)
         self.assertEqual(code, 1)
         self.assertIn("alloc_array", out)
+
+
+class PerfSmokePin(unittest.TestCase):
+    """perf-smoke.sh reads the budget's scene and env, so every host loads the same map."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        open(os.path.join(self.dir, "project.godot"), "w").write('run/main_scene="res://main.tscn"\n')
+        self.fake = os.path.join(self.dir, "fake-godot")
+        open(self.fake, "w").write(
+            "#!/bin/sh\n"
+            'echo "ARGS $*" > "$PWD/seen"; echo "PIN=$PIN" >> "$PWD/seen"\n'
+            'echo \'PERF_SMOKE {"scene":"\'"$7"\'","load_ms":1,"frame_ms":1,"nodes":10,"mem_mb":1}\'\n')
+        os.chmod(self.fake, 0o755)
+        self.budget = os.path.join(self.dir, "ci", "perf", "smoke.json")
+
+    def smoke(self, *args):
+        r = subprocess.run(["bash", os.path.join(S, "perf-smoke.sh"), *args, self.dir], capture_output=True,
+                           text=True, env={**os.environ, "GODOT": self.fake})
+        code, out = r.returncode, r.stdout + r.stderr
+        return code, out, open(os.path.join(self.dir, "seen")).read()
+
+    def test_init_records_env_and_check_reuses_it(self):
+        code, out, seen = self.smoke("--init", "--scene", "res://m.tscn", "--env", "PIN=snow")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(json.load(open(self.budget))["env"], {"PIN": "snow"})
+        code, out, seen = self.smoke()  # no flags: scene and env come from the budget
+        self.assertEqual(code, 0, out)
+        self.assertIn("res://m.tscn", seen)
+        self.assertIn("PIN=snow", seen)
+
+    def test_old_budget_without_pins_uses_main_scene(self):
+        os.makedirs(os.path.dirname(self.budget))
+        json.dump({"scene": "", "load_ms": 5, "frame_ms": 5, "nodes": 50, "mem_mb": 5}, open(self.budget, "w"))
+        code, out, seen = self.smoke()
+        self.assertEqual(code, 0, out)
+        self.assertIn("res://main.tscn", seen)
+        self.assertIn("PIN=\n", seen)
 
 
 class PerfBudget(unittest.TestCase):

@@ -29,12 +29,31 @@ def this_host():
     return "github-runner" if os.environ.get("GITHUB_ACTIONS") == "true" else "local"
 
 
+def read_pin(path, what):
+    """`read <budget> scene|env`: the pinned scene, or the pinned env as KEY=VALUE lines."""
+    try:
+        bud = json.load(open(path))
+    except (OSError, ValueError):
+        return 0
+    if what == "scene":
+        print(bud.get("scene", ""))
+    else:
+        for k, v in (bud.get("env") or {}).items():
+            print("%s=%s" % (k, v))
+    return 0
+
+
 def main():
+    if sys.argv[1] == "read":
+        return read_pin(sys.argv[2], sys.argv[3])
     mode, path, tol, raw = sys.argv[1], sys.argv[2], float(sys.argv[3]), sys.argv[4]
     cur = json.loads(raw)
     host = this_host()
     new = {k: cur[k] for k in ("scene",) + METRICS}
     new["host"] = host
+    pins = [e for e in os.environ.get("PERF_ENV", "").splitlines() if "=" in e]
+    if pins:
+        new["env"] = dict(e.split("=", 1) for e in pins)
     if mode == "init":
         if os.path.exists(path):
             print("perf-smoke: %s exists; use --update" % path)

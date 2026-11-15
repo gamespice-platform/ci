@@ -135,7 +135,7 @@ scripts/package.sh ../dot-cloud 0.2.0 --out /tmp/out
 | `efficiency-trend.py` | Reads `efficiency-report.sh` output on stdin, appends the totals to a history file and prints the change. `--strict` exits 1 if size, hazards or duplicate clusters grew. |
 | `efficiency-nightly.sh` | The nightly check in one command: report, then the trend with `--strict`. |
 | `rollout-caller.sh <repo>` | Turns the efficiency gates on for one repository: baselines first, then the flags. |
-| `perf-smoke.sh [--init\|--update] [--scene S] [--seconds N] <project>` | Loads the main scene headless for N seconds (default 5) and compares load time, frame time, node count and memory with `ci/perf/smoke.json`. Fails when more than 20% over budget (timings get 2.5 times that, and are compared only on the kind of host the budget was timed on: a GitHub runner does not time against a dev-box budget). `--init` records the budget, `--update` only lowers it. Run it under `heavy`. |
+| `perf-smoke.sh [--init\|--update] [--scene S] [--seconds N] <project>` | Loads the main scene headless for N seconds (default 5) and compares load time, frame time, node count and memory with `ci/perf/smoke.json`. Fails when more than 20% over budget (timings get 2.5 times that, and are compared only on the kind of host the budget was timed on: a GitHub runner does not time against a dev-box budget). `--init` records the budget, `--update` only lowers it. Scene is `--scene`, else the budget's `scene`, else the main scene; the budget's `env` (written by `--init --env KEY=VALUE`, repeatable) is exported to the run, so a game pins its random map and every host loads the same one. Run it under `heavy`. |
 
 ## Why this repository is public
 
