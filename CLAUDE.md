@@ -16,7 +16,7 @@ This is not a Godot project. It has no `project.godot`, no `addons/`, and nothin
 | Path | What |
 | --- | --- |
 | `.github/workflows/validate.yml` | reusable: resolve addons, import, parse every tracked script, run every suite |
-| `.github/workflows/release.yml` | reusable: artifact + `SHA256SUMS` on a `v*` tag; `pack: true` adds `-pack.zip`; server-compat gate |
+| `.github/workflows/release.yml` | reusable: artifact + `SHA256SUMS` on a `v*` tag; `pack: true` adds `-pack.zip`; server-compat gate; optional `host-lock` input -> `package.sh --host-lock` |
 | `.github/workflows/release-maps.yml` | reusable: one pack per map for a map repository |
 | `.github/workflows/ci.yml` | this repository's own check: `bash -n` and shellcheck on `scripts/`, workflows load as YAML, the pin fetches and verifies |
 | `godot.pin` | the runtime version and SHA512 (the second copy; it says which is authoritative) |

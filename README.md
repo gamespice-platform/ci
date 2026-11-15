@@ -93,7 +93,7 @@ Auto-detection runs `examples/*.tscn` whose name contains `selftest` or starts w
 | Game with `pack: true` | Also `<name>-<version>-pack.zip`: the tracked tree without `addons/`, plus the imported outputs its `.import` markers name (moved to `_imported/`), and a `requires.json` of the addon API levels it needs, so an older client refuses it before mounting. |
 | Maps repository | `release-maps.yml` makes one pack per map: it checks the game out beside the maps, imports, and runs `scripts/package-subpacks.sh`. Inputs are `game`, and optionally `maps-dir`, `link-at` and `game-ref`. |
 
-Every release carries a `SHA256SUMS`. Before a release is created, `scripts/server-compat.sh` checks that the newest `dot-server-deploy` release can run the pack. A game that needs an addon API level no server release has yet fails here. `server-compat: false` opts out. A release does not publish to the content origin and does not sign anything. The signing key lives in one deployment on purpose.
+Every release carries a `SHA256SUMS`. Before a release is created, `scripts/server-compat.sh` checks that the newest `dot-server-deploy` release can run the pack. A game that needs an addon API level no server release has yet fails here. `server-compat: false` opts out. `host-lock: <path>` (with `pack`, a path in the caller's checkout to the host's `addons.lock`) judges `requires.floor.json` against the levels that lock pins; a missing or empty lock fails the release, and leaving it empty changes nothing. A release does not publish to the content origin and does not sign anything. The signing key lives in one deployment on purpose.
 
 ## The runtime
 
