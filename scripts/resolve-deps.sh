@@ -72,6 +72,7 @@ addon_repo() {
     case "$1" in
         zee_weapons) printf 'zee-dot-weapons\n' ;;
         zed_weapons) printf 'zed-dot-weapons\n' ;;
+        arena_weapons) printf 'fc-weapons\n' ;;
         *)           printf '%s\n' "${1//_/-}" ;;
     esac
 }
@@ -120,6 +121,7 @@ if [ -f "$LOCK" ]; then
         case "$repo" in
             zee-dot-weapons) addon=zee_weapons ;;
             zed-dot-weapons) addon=zed_weapons ;;
+            fc-weapons)      addon=arena_weapons ;;  # the directory kept its name when arena-weapons became fc-weapons
             *)               addon="${repo//-/_}" ;;
         esac
         ADDONS+=("$addon")
