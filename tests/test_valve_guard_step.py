@@ -17,7 +17,7 @@ class ValveGuardStep(unittest.TestCase):
 
     def test_checkout_is_pinned_to_a_full_commit(self):
         body = self._step("Check out the Valve-origin guard")
-        self.assertIn("repository: modcommunity/dot-cloud", body)
+        self.assertIn("repository: gamespice-platform/cloud", body)
         m = re.search(r"ref: ([0-9a-f]+)\n", body)
         self.assertIsNotNone(m, "ref is not a literal commit")
         self.assertRegex(m.group(1), r"^[0-9a-f]{40}$", "pin must be a full 40-character commit, not a branch")

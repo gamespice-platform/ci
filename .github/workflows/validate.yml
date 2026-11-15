@@ -181,7 +181,7 @@ jobs:
             - name: Check out the Valve-origin guard
               uses: actions/checkout@v4
               with:
-                  repository: modcommunity/dot-cloud
+                  repository: gamespice-platform/cloud
                   ref: a3a00c6eff41d1153c2cb79bf35468588891ac0f
                   token: ${{ secrets.DEPS_TOKEN || github.token }}
                   path: dot-cloud
