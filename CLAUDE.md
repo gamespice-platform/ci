@@ -35,7 +35,7 @@ This is not a Godot project. It has no `project.godot`, no `addons/`, and nothin
 | `scripts/check-profiles.sh` | opt-in `profiles: true`: runs dot-profile's `profile_check.gd` over a project's `cfg/` profile yml; fails on any schema, `extends` or duplicate-id problem |
 | `scripts/rollout-caller.sh <repo-dir>` | one caller's efficiency rollout: runs the missing `--init` baselines, adds `efficiency`/`perf`/`hygiene: true` under `with:` in its `ci.yml`, one plain commit, never pushes (skips a dirty tree, exit 3). Idempotent; tests in `tests/test_rollout_caller.py` |
 | `scripts/affected.sh [REPO] [--since REV] [--cmds\|--json]` | which sibling repositories link the changed repository and which of their suites (reached by class name or file name through three hops) to run; `parse` when none names the change. Tests in `tests/test_affected.py` |
-| `scripts/package.sh` | the release artifact; `--pack` builds the pack zip and `requires.json` |
+| `scripts/package.sh` | the release artifact; `--pack` builds the pack zip and `requires.json`; `--host-lock FILE` passes that lock's addon levels (`lock_pins.gd`) to `dot_requires.gd` as `--pin`. Tests in `tests/test_package_lock_pins.py` |
 | `scripts/package-subpacks.sh` | one pack per map directory |
 | `scripts/server-compat.sh` | refuses a pack the newest released server cannot run |
 

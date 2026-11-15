@@ -38,6 +38,14 @@
 #   addons resolved so the import can see them. release.yml does both when the caller
 #   passes `pack: true`.
 #
+#   --host-lock FILE (or HOST_LOCK=FILE) names the addons.lock of the shell the pack will
+#   run on. Its pinned addon levels (read by the project's dot-core, DotAddonApi
+#   pinned_levels, from the repositories in DOT_REPOS_ROOT, <project>/.deps, beside the
+#   project, TMC_REPOS_DIR, ~/godot) go to dot_requires.gd as --pin, so a
+#   requires.floor.json floor above what that shell ships fails the pack instead of being
+#   judged against the linked head. A lock that reads to no level fails. Without it,
+#   nothing changes.
+#
 # WHAT IS IN THE ARTIFACT IS WHAT GIT TRACKS, via git archive. Not `cp -r`, and the
 # difference is the point: addons/ is a directory of gitignored SYMLINKS into sibling
 # checkouts on a developer box and into .deps/ on a runner, and a copy would either
@@ -48,7 +56,7 @@
 #
 set -uo pipefail
 
-USAGE="usage: package.sh <project-dir> <version> [--out DIR] [--name NAME] [--pack [--exclude-dir DIR]... [--pack-owned-addons]]"
+USAGE="usage: package.sh <project-dir> <version> [--out DIR] [--name NAME] [--pack [--exclude-dir DIR]... [--pack-owned-addons] [--host-lock FILE]]"
 PROJECT="${1:?$USAGE}"
 VERSION="${2:?$USAGE}"
 shift 2
@@ -56,6 +64,7 @@ OUT=""
 NAME=""
 PACK=0
 PACK_OWNED=0
+HOST_LOCK="${HOST_LOCK:-}"
 # What a game pack never carries, at any depth. addons/ above all: every dot-* addon
 # is already in the host build, and packing a game with its addons produced an 11 MiB
 # pack of which the game was a fraction. images/ is a README's pictures: every game's
@@ -74,6 +83,7 @@ while [ $# -gt 0 ]; do
         --name) NAME="${2:?--name needs a name}"; shift 2 ;;
         --pack) PACK=1; shift ;;
         --pack-owned-addons) PACK_OWNED=1; shift ;;
+        --host-lock) HOST_LOCK="${2:?--host-lock needs an addons.lock}"; shift 2 ;;
         --exclude-dir) EXCLUDE_DIRS+=("${2:?--exclude-dir needs a name}"); shift 2 ;;
         *) printf 'unknown option: %s\n' "$1" >&2; exit 2 ;;
     esac
@@ -81,6 +91,11 @@ done
 
 [ -d "$PROJECT" ] || { printf 'no such directory: %s\n' "$PROJECT" >&2; exit 2; }
 PROJECT="$(cd "$PROJECT" && pwd -P)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if [ -n "$HOST_LOCK" ]; then
+    [ -f "$HOST_LOCK" ] || { printf 'no such host lock: %s\n' "$HOST_LOCK" >&2; exit 2; }
+    HOST_LOCK="$(cd "$(dirname "$HOST_LOCK")" && pwd -P)/$(basename "$HOST_LOCK")"
+fi
 
 # --name, and it is not a convenience. A runner checks the repository out into a
 # directory it chose -- `project` here -- so the basename is the CHECKOUT's name and
@@ -248,12 +263,30 @@ if [ "$PACK" -eq 1 ]; then
     # audited here instead: an addon used and not declared, or declared above what
     # this build has, fails the release rather than a player's join.
     REQ_TOOL="res://addons/dot_core/tools/dot_requires.gd"
+    REQ_PINS=()
+    if [ -n "$HOST_LOCK" ]; then
+        # The shell's levels, so a floor is judged against what players run. A dot-core
+        # that cannot take them would ignore --pin and judge against the linked head:
+        # failed, not passed, since the caller asked for the check.
+        grep -q '"--pin"' "$PROJECT/addons/dot_core/tools/dot_requires.gd" 2>/dev/null \
+            && grep -q 'func pinned_levels' "$PROJECT/addons/dot_core/core/dot_addon_api.gd" 2>/dev/null \
+            || { printf 'the linked dot-core cannot judge floors against a lock (no --pin / pinned_levels); --host-lock needs a newer one\n' >&2; exit 1; }
+        pins_out="$("${GODOT:-godot}" --headless --path "$PROJECT" --script "$HERE/lock_pins.gd" -- "$HOST_LOCK" \
+            "${DOT_REPOS_ROOT:-}" "$PROJECT/.deps" "$(dirname "$PROJECT")" "${TMC_REPOS_DIR:-}" "$HOME/godot")" \
+            || { printf 'could not read the addon levels %s pins\n' "$HOST_LOCK" >&2; exit 1; }
+        while IFS=$'\t' read -r tag pin; do
+            [ "$tag" = pin ] && REQ_PINS+=(--pin "$pin")
+        done <<< "$pins_out"
+        [ "${#REQ_PINS[@]}" -gt 0 ] \
+            || { printf '%s reads to no addon level (are its repositories in DOT_REPOS_ROOT?)\n' "$HOST_LOCK" >&2; exit 1; }
+        printf 'floors judged against %d addon levels pinned by %s\n' "$(( ${#REQ_PINS[@]} / 2 ))" "$HOST_LOCK" >&2
+    fi
     if [ -f "$PROJECT/addons/dot_core/tools/dot_requires.gd" ]; then
         if [ -f "$PACK_DIR/requires.json" ]; then
             "${GODOT:-godot}" --headless --path "$PROJECT" --script "$REQ_TOOL" -- --check requires.json >&2 \
                 || { printf '%s/requires.json does not cover what the game uses\n' "$NAME" >&2; exit 1; }
         else
-            "${GODOT:-godot}" --headless --path "$PROJECT" --script "$REQ_TOOL" -- --out "$PACK_DIR/requires.json" >&2 \
+            "${GODOT:-godot}" --headless --path "$PROJECT" --script "$REQ_TOOL" -- --out "$PACK_DIR/requires.json" "${REQ_PINS[@]}" >&2 \
                 || { printf 'could not derive requires.json for %s\n' "$NAME" >&2; exit 1; }
             [ -s "$PACK_DIR/requires.json" ] \
                 || { printf 'requires.json for %s came out empty\n' "$NAME" >&2; exit 1; }
