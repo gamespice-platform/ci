@@ -16,7 +16,7 @@
 # as untagged commits when the game was tagged.
 #
 # So the same rule is asked here, of the newest RELEASED server: the addons.lock of
-# modcommunity/dot-server-deploy's highest v* tag names the ref of every addon a box
+# gamespice-platform/server-deploy's highest v* tag names the ref of every addon a box
 # installs, and each addon's level is the `const LEVEL` / `const OLDEST` in its
 # addons/<addon>/<addon>_api.gd at that ref (absent means 1, as DotAddonApi reads it).
 # A game passes when, for every addon it names: the lock has it, need <= LEVEL, and
@@ -31,9 +31,9 @@
 # lock, and release dot-server-deploy, then re-tag the game.
 #
 # Environment:
-#   SERVER_REPO   default modcommunity/dot-server-deploy
+#   SERVER_REPO   default gamespice-platform/server-deploy
 #   DEPS_TOKEN    optional; read access for private repositories (never printed)
-#   DOT_OWNER     default modcommunity   (the addons)
+#   DOT_OWNER     default gamespice-platform (the addons; repositories drop the dot- prefix)
 #   GAME_OWNER    default zees-games     (zee-dot-weapons and zed-dot-weapons, the addons that are not)
 set -uo pipefail
 
@@ -50,8 +50,8 @@ while [ $# -gt 0 ]; do
 done
 
 export INPUT SERVER_REF
-export SERVER_REPO="${SERVER_REPO:-modcommunity/dot-server-deploy}"
-export DOT_OWNER="${DOT_OWNER:-modcommunity}"
+export SERVER_REPO="${SERVER_REPO:-gamespice-platform/server-deploy}"
+export DOT_OWNER="${DOT_OWNER:-gamespice-platform}"
 export GAME_OWNER="${GAME_OWNER:-zees-games}"
 
 exec python3 - <<'PY'
@@ -157,6 +157,10 @@ def repo_of(addon):
     return addon.replace("_", "-")
 
 
+def remote_name(r):
+    return r[len("dot-"):] if r.startswith("dot-") else r
+
+
 def owner_of(r):
     return os.environ["DOT_OWNER"] if r.startswith("dot-") else os.environ["GAME_OWNER"]
 
@@ -174,7 +178,7 @@ for addon in sorted(needs):
     if r not in lock:
         problems.append(f"needs {addon}, and the server at {ref} does not install it")
         continue
-    api = fetch(f"{owner_of(r)}/{r}", lock[r], f"addons/{addon}/{addon}_api.gd")
+    api = fetch(f"{owner_of(r)}/{remote_name(r) if owner_of(r) == os.environ['DOT_OWNER'] else r}", lock[r], f"addons/{addon}/{addon}_api.gd")
     have = const(api, "LEVEL") or 1
     oldest = min(const(api, "OLDEST") or 1, have)
     if need > have:

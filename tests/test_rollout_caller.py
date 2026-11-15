@@ -9,7 +9,7 @@ CI = """name: CI
 on: [push]
 jobs:
     validate:
-        uses: modcommunity/dot-ci/.github/workflows/validate.yml@v1
+        uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
 %s        secrets:
             DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
 """

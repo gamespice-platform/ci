@@ -23,7 +23,7 @@ on:
 
 jobs:
     validate:
-        uses: modcommunity/dot-ci/.github/workflows/validate.yml@v1
+        uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
         secrets:
             DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
 ```
@@ -38,12 +38,12 @@ on:
 
 jobs:
     validate:
-        uses: modcommunity/dot-ci/.github/workflows/validate.yml@v1
+        uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
         secrets:
             DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
     release:
         needs: validate
-        uses: modcommunity/dot-ci/.github/workflows/release.yml@v1
+        uses: gamespice-platform/ci/.github/workflows/release.yml@v1
         permissions:
             contents: write
 ```

@@ -27,7 +27,7 @@ name="$(basename "$repo")"
 yml="$repo/.github/workflows/ci.yml"
 say() { printf 'rollout %s: %s\n' "$name" "$*"; }
 
-[ -f "$yml" ] && grep -q 'dot-ci/.github/workflows/validate.yml' "$yml" || { say "SKIP no ci.yml calling dot-ci"; exit 0; }
+[ -f "$yml" ] && grep -q 'ci/.github/workflows/validate.yml' "$yml" || { say "SKIP no ci.yml calling dot-ci"; exit 0; }
 if [ -n "$(git -C "$repo" status --porcelain)" ]; then say "SKIP dirty tree"; exit 3; fi
 
 rc=0
@@ -70,7 +70,7 @@ if [ "${#flags[@]}" -gt 0 ]; then
 import re, sys
 path, flags = sys.argv[1], sys.argv[2:]
 lines = open(path).read().split("\n")
-job = next((i for i, l in enumerate(lines) if "dot-ci/.github/workflows/validate.yml" in l), None)
+job = next((i for i, l in enumerate(lines) if "ci/.github/workflows/validate.yml" in l), None)
 if job is None:
     sys.exit(1)
 indent = re.match(r"\s*", lines[job]).group()

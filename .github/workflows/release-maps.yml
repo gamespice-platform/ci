@@ -63,7 +63,7 @@ jobs:
             - name: Check out the CI scripts this workflow belongs to
               uses: actions/checkout@v4
               with:
-                  repository: modcommunity/dot-ci
+                  repository: gamespice-platform/ci
                   ref: ${{ github.job_workflow_sha }}
                   path: dot-ci
             - name: Work out the version

@@ -45,7 +45,7 @@
 #
 #   DEPS_TOKEN   a token that can read the private addon repositories
 #   GIT_HOST     default github.com
-#   DOT_OWNER    default modcommunity   (the addons)
+#   DOT_OWNER    default gamespice-platform (the addons; their repositories drop the dot- prefix)
 #   GAME_OWNER   default zees-games     (the games, and the weapons packs)
 #
 set -uo pipefail
@@ -57,7 +57,7 @@ MODE="${2:-clone}"
 PROJECT="$(cd "$PROJECT" && pwd -P)"
 
 GIT_HOST="${GIT_HOST:-github.com}"
-DOT_OWNER="${DOT_OWNER:-modcommunity}"
+DOT_OWNER="${DOT_OWNER:-gamespice-platform}"
 GAME_OWNER="${GAME_OWNER:-zees-games}"
 DEPS_DIR="$PROJECT/.deps"
 
@@ -83,6 +83,12 @@ addon_owner() {
         dot-*) printf '%s\n' "$DOT_OWNER" ;;
         *)     printf '%s\n' "$GAME_OWNER" ;;
     esac
+}
+
+## The name a repository has on the host. The addons live in the DOT_OWNER organisation without the
+## `dot-` prefix (dot-audio -> audio); the directory a clone lands in keeps the local name.
+remote_name() {
+    if [ "$1" = "$DOT_OWNER" ]; then printf '%s\n' "${2#dot-}"; else printf '%s\n' "$2"; fi
 }
 
 # /addons/ on its own names nothing. The anchored, single-segment pattern is what
@@ -202,7 +208,7 @@ for addon in "${ADDONS[@]}"; do
         # rather than passed as an argument so it is never a separate word anything
         # logs; git itself keeps it out of the error text.
         if ! err="$(git clone --quiet --depth 1 ${ref:+--branch "$ref"} \
-            "https://${CREDENTIAL}${GIT_HOST}/${owner}/${repo}.git" \
+            "https://${CREDENTIAL}${GIT_HOST}/${owner}/$(remote_name "$owner" "$repo").git" \
             "$DEPS_DIR/$clone" 2>&1)"; then
             # git echoes the URL it was given, and the URL carries the token. Redacted
             # here rather than discarded: a clone failure with no reason printed is
@@ -240,7 +246,7 @@ for line in "${CONTENT[@]}"; do
     owner="$(addon_owner "$repo")"
     if [ ! -d "$DEPS_DIR/$repo/.git" ]; then
         if ! err="$(git clone --quiet --depth 1 \
-            "https://${CREDENTIAL}${GIT_HOST}/${owner}/${repo}.git" \
+            "https://${CREDENTIAL}${GIT_HOST}/${owner}/$(remote_name "$owner" "$repo").git" \
             "$DEPS_DIR/$repo" 2>&1)"; then
             printf '  FAIL  could not clone %s/%s (for %s)\n        %s\n' \
                 "$owner" "$repo" "$path" "$(printf '%s' "$err" | _redact | tr '\n' ' ')" >&2
