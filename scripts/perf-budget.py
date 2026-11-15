@@ -35,8 +35,8 @@ def read_pin(path, what):
         bud = json.load(open(path))
     except (OSError, ValueError):
         return 0
-    if what == "scene":
-        print(bud.get("scene", ""))
+    if what in ("scene", "warmup_frames"):
+        print(bud.get(what, ""))
     else:
         for k, v in (bud.get("env") or {}).items():
             print("%s=%s" % (k, v))
@@ -67,6 +67,9 @@ def main():
     except OSError:
         print("perf-smoke: no budget at %s (run --init); this run: %s" % (path, raw))
         return 1
+    for k in ("frame_median_ms", "first_frame_ms"):
+        if k in cur:
+            print("%-9s %9s  (not compared)" % (k, cur[k]))
     timed_here = bud.get("host", "local") == host
     bad = []
     for k in METRICS:

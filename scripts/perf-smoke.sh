@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Headless perf smoke for a project: load time, frame time, node count and memory after N
 # seconds, compared with a budget recorded in the project (ci/perf/smoke.json).
-# Usage: perf-smoke.sh [--init|--update] [--scene res://x.tscn] [--seconds N] [--tolerance PCT] <project-dir>
+# Usage: perf-smoke.sh [--init|--update] [--scene res://x.tscn] [--seconds N] [--warmup N] [--tolerance PCT] <project-dir>
 #   (no flag)  fail when a metric is more than PCT (default 20) over the budget
 #   --init     write the budget from this run (refuses to overwrite)
 #   --update   lower the budget where this run is better; never raises one
@@ -9,17 +9,21 @@
 # (a JSON object, written by --env KEY=VALUE, repeatable, on --init) is exported to the run, so a
 # game pins what its scene picks at random (a map) and CI and local runs load the same thing.
 # Budgets without "scene"/"env" work as before. GODOT picks the runtime (default: godot).
+# Warm-up: the first N frames (--warmup, else the budget's "warmup_frames", else PERF_WARMUP_FRAMES,
+# else 10) are left out of frame_ms and the window restarts after them; the first frame's own cost
+# is printed as first_frame_ms, never compared. 0 = no warm-up (the old measurement).
 # Frame time is the engine's process time with rendering off, so it is a CPU-side ratchet
 # for scripts and node count, not a measure of what a GPU does. Run it through `heavy`.
 set -u
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-mode=check scene="" seconds=5 tol=20 envs=()
+mode=check scene="" seconds=5 tol=20 warmup="" envs=()
 while [ $# -gt 1 ]; do
     case "$1" in
         --init) mode=init; shift ;;
         --update) mode=update; shift ;;
         --scene) scene="$2"; shift 2 ;;
         --seconds) seconds="$2"; shift 2 ;;
+        --warmup) warmup="$2"; shift 2 ;;
         --env) envs+=("$2"); shift 2 ;;
         --tolerance) tol="$2"; shift 2 ;;
         *) break ;;
@@ -37,13 +41,19 @@ fi
 case "$scene" in res://uid://*|uid://*) echo "perf-smoke: pass --scene (main scene is a uid)" >&2; exit 2 ;; esac
 [ -n "$scene" ] || { echo "perf-smoke: no main scene; pass --scene" >&2; exit 2; }
 
+if [ -z "$warmup" ] && [ -f "$budget" ]; then
+    warmup="$(python3 "$here/perf-budget.py" read "$budget" warmup_frames)" || exit 2
+fi
+warmup="${warmup:-${PERF_WARMUP_FRAMES:-10}}"
+case "$warmup" in ''|*[!0-9]*) echo "perf-smoke: warmup frames '$warmup' is not an integer >= 0" >&2; exit 2 ;; esac
+
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 pinned=()
 if [ -f "$budget" ]; then
     mapfile -t pinned < <(python3 "$here/perf-budget.py" read "$budget" env) || exit 2
 fi
-(cd "$dir" && env "${pinned[@]}" "${envs[@]}" timeout $((seconds + 120)) "${GODOT:-godot}" --headless --path . --script "$here/perf_smoke.gd" -- "$scene" "$seconds") >"$log" 2>&1
+(cd "$dir" && env "${pinned[@]}" "${envs[@]}" timeout $((seconds + 120)) "${GODOT:-godot}" --headless --path . --script "$here/perf_smoke.gd" -- "$scene" "$seconds" "$warmup") >"$log" 2>&1
 line="$(grep '^PERF_SMOKE ' "$log" | tail -1 | cut -d' ' -f2-)"
 if [ -z "$line" ]; then
     echo "perf-smoke: no result"; tail -5 "$log"; exit 1
