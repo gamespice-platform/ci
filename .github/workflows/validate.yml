@@ -182,7 +182,7 @@ jobs:
               uses: actions/checkout@v4
               with:
                   repository: modcommunity/dot-cloud
-                  ref: 01c6b3fbb1db604d550d05b3aa709d7f52848ccd
+                  ref: a3a00c6eff41d1153c2cb79bf35468588891ac0f
                   token: ${{ secrets.DEPS_TOKEN || github.token }}
                   path: dot-cloud
 
