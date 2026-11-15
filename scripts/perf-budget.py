@@ -5,6 +5,13 @@
 
 Lower is better for every metric. Timed metrics get 2.5x the tolerance (run-to-run noise). `check` fails when a metric exceeds budget by more than the
 tolerance; `update` lowers budgets and never raises one, the same ratchet as the other gates.
+
+Node count and memory are the same on every machine, so they are checked everywhere. Load and
+frame time depend on the machine, so they are checked only on the kind of host the budget was
+timed on (the budget's "host", "local" when absent: rollout-caller.sh records budgets under
+`heavy`). Elsewhere, such as a GitHub-hosted runner timing a budget from a dev box, they are
+printed and not compared. PERF_HOST names this run's host; the default is "github-runner" under
+GitHub Actions and "local" otherwise.
 """
 import json
 import os
@@ -16,10 +23,18 @@ TIMED = ("load_ms", "frame_ms")
 TIMED_FACTOR = 2.5
 
 
+def this_host():
+    if os.environ.get("PERF_HOST"):
+        return os.environ["PERF_HOST"]
+    return "github-runner" if os.environ.get("GITHUB_ACTIONS") == "true" else "local"
+
+
 def main():
     mode, path, tol, raw = sys.argv[1], sys.argv[2], float(sys.argv[3]), sys.argv[4]
     cur = json.loads(raw)
+    host = this_host()
     new = {k: cur[k] for k in ("scene",) + METRICS}
+    new["host"] = host
     if mode == "init":
         if os.path.exists(path):
             print("perf-smoke: %s exists; use --update" % path)
@@ -33,15 +48,21 @@ def main():
     except OSError:
         print("perf-smoke: no budget at %s (run --init); this run: %s" % (path, raw))
         return 1
+    timed_here = bud.get("host", "local") == host
     bad = []
     for k in METRICS:
         limit = bud[k] * (1 + tol * (TIMED_FACTOR if k in TIMED else 1) / 100.0)
+        if k in TIMED and not timed_here:
+            print("%-9s %9s  budget %9s  not compared: timed on %s, this run on %s"
+                  % (k, cur[k], bud[k], bud.get("host", "local"), host))
+            continue
         print("%-9s %9s  budget %9s  limit %9.3f" % (k, cur[k], bud[k], limit))
         if cur[k] > limit:
             bad.append(k)
     if mode == "update":
         for k in METRICS:
-            bud[k] = min(bud[k], cur[k])
+            if timed_here or k not in TIMED:
+                bud[k] = min(bud[k], cur[k])
         json.dump(bud, open(path, "w"), indent=2)
         print("updated %s" % path)
     if bad:

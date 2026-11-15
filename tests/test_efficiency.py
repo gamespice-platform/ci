@@ -358,6 +358,21 @@ class PerfBudget(unittest.TestCase):
         self.assertEqual(self.go("check", path, self.RES % 1100)[0], 1)  # budget fell to 900
         self.assertEqual(self.go("update", path, self.RES % 2000)[0], 1)  # and never rises
 
+    def test_timings_compare_only_on_their_host(self):
+        path = os.path.join(tempfile.mkdtemp(), "ci", "perf", "smoke.json")
+        slow = '{"scene":"res://m.tscn","load_ms":9000,"frame_ms":20,"nodes":1000,"mem_mb":100}'
+        os.environ["PERF_HOST"] = "box-a"
+        try:
+            self.assertEqual(self.go("init", path, self.RES % 1000)[0], 0)
+            self.assertEqual(self.go("check", path, slow)[0], 1)  # same host: a slower load fails
+            os.environ["PERF_HOST"] = "box-b"
+            code, out = self.go("check", path, slow)
+            self.assertEqual(code, 0, out)  # another host's timings are shown, not compared
+            self.assertIn("not compared", out)
+            self.assertEqual(self.go("check", path, self.RES % 1300)[0], 1)  # counts still are
+        finally:
+            del os.environ["PERF_HOST"]
+
 
 if __name__ == "__main__":
     unittest.main()
