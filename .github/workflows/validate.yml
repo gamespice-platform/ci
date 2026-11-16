@@ -170,6 +170,11 @@ jobs:
             - name: Tracked names check out on Windows
               run: python3 dot-ci/scripts/check-windows-names.py project
 
+            # A file split into numbered parts (x_part1.gd, x_part2.gd) or named misc: split by
+            # responsibility and name each piece for what it holds. Escape: ci/split-names.allow.
+            - name: No numbered or meaningless file names
+              run: python3 dot-ci/scripts/check-split-names.py project
+
             # The web origin's CSP has no 'unsafe-eval': JavaScriptBridge.eval throws EvalError there.
             - name: No JavaScript string evaluation
               run: python3 dot-ci/scripts/check-no-js-eval.py project
