@@ -149,8 +149,15 @@ for line in lock_text.splitlines():
         lock[parts[0]] = parts[1]
 
 
+# A renamed addon directory: current -> legacy. fc-weapons (Fatal Contact's weapons) holds
+# addons/fc_weapons; its tags up to v1.4.51 hold the legacy addons/arena_weapons. Which one a
+# server has is decided by what its locked ref holds, never assumed.
+LEGACY_DIRS = {"fc_weapons": "arena_weapons"}
+CURRENT_DIRS = {old: new for new, old in LEGACY_DIRS.items()}
+
+
 def repo_of(addon):
-    if addon == "arena_weapons":  # the directory kept its name when arena-weapons became fc-weapons
+    if addon in ("fc_weapons", "arena_weapons"):
         return "fc-weapons"
     if addon in ("zee_weapons", "zed_weapons"):
         return addon.replace("_weapons", "-dot-weapons")
@@ -178,7 +185,20 @@ for addon in sorted(needs):
     if r not in lock:
         problems.append(f"needs {addon}, and the server at {ref} does not install it")
         continue
-    api = fetch(f"{owner_of(r)}/{remote_name(r) if owner_of(r) == os.environ['DOT_OWNER'] else r}", lock[r], f"addons/{addon}/{addon}_api.gd")
+    source = f"{owner_of(r)}/{remote_name(r) if owner_of(r) == os.environ['DOT_OWNER'] else r}"
+    if addon in LEGACY_DIRS or addon in CURRENT_DIRS:
+        # The pack names the directory its game references; the server installs the one its
+        # ref holds. Both must agree, or the game's res:// paths miss on that server.
+        other = LEGACY_DIRS.get(addon) or CURRENT_DIRS.get(addon)
+        if fetch(source, lock[r], f"addons/{addon}/plugin.cfg") is None:
+            if fetch(source, lock[r], f"addons/{other}/plugin.cfg") is not None:
+                problems.append(f"needs addons/{addon}; the server at {ref} locks {r} {lock[r]}, which holds addons/{other}")
+            else:
+                problems.append(f"needs addons/{addon}; {r} {lock[r]} holds neither addons/{addon} nor addons/{other}")
+            continue
+        if addon in CURRENT_DIRS:
+            print(f"  WRN   {addon} is the legacy directory name ({r} {lock[r]}); the current one is {CURRENT_DIRS[addon]}")
+    api = fetch(source, lock[r], f"addons/{addon}/{addon}_api.gd")
     have = const(api, "LEVEL") or 1
     oldest = min(const(api, "OLDEST") or 1, have)
     if need > have:

@@ -67,13 +67,29 @@ DEPS_DIR="$PROJECT/.deps"
 ## weapons packs: each took a prefix (`zee_`, `zed_`) so it could sit on top of the family
 ## without colliding with it, and its repository is named for what it IS rather than for
 ## its prefix (zee-dot-weapons, zed-dot-weapons). Same exception setup.sh's addon_repo()
-## carries.
+## carries. fc-weapons (Fatal Contact's weapons) holds addons/fc_weapons; its tags up to
+## v1.4.51 hold the legacy addons/arena_weapons, which still maps here (see legacy_dir).
 addon_repo() {
     case "$1" in
         zee_weapons) printf 'zee-dot-weapons\n' ;;
         zed_weapons) printf 'zed-dot-weapons\n' ;;
-        arena_weapons) printf 'fc-weapons\n' ;;
+        fc_weapons|arena_weapons) printf 'fc-weapons\n' ;;
         *)           printf '%s\n' "${1//_/-}" ;;
+    esac
+}
+
+## The legacy directory a renamed addon had, or nothing. Used only when the ref a clone is
+## at actually holds that directory, and every use prints a WRN naming the ref.
+legacy_dir() {
+    case "$1" in
+        fc_weapons) printf 'arena_weapons\n' ;;
+    esac
+}
+
+## The current directory for a legacy one, or nothing.
+current_dir() {
+    case "$1" in
+        arena_weapons) printf 'fc_weapons\n' ;;
     esac
 }
 
@@ -121,7 +137,7 @@ if [ -f "$LOCK" ]; then
         case "$repo" in
             zee-dot-weapons) addon=zee_weapons ;;
             zed-dot-weapons) addon=zed_weapons ;;
-            fc-weapons)      addon=arena_weapons ;;  # the directory kept its name when arena-weapons became fc-weapons
+            fc-weapons)      addon=fc_weapons ;;  # refs up to v1.4.51 hold the legacy arena_weapons: decided after the clone
             *)               addon="${repo//-/_}" ;;
         esac
         ADDONS+=("$addon")
@@ -225,10 +241,35 @@ for addon in "${ADDONS[@]}"; do
         fi
     fi
 
+    # A renamed addon is linked under the directory its ref HOLDS, because its own res://
+    # paths name that directory. fc-weapons tags up to v1.4.51 hold addons/arena_weapons,
+    # later ones addons/fc_weapons. Never an alias: a game naming one directory and a ref
+    # holding the other is a FAIL (the game or the pin has to move), and the legacy name
+    # is always reported.
     if [ ! -d "$DEPS_DIR/$clone/addons/$addon" ]; then
-        printf '  FAIL  %s has no addons/%s\n' "$clone" "$addon" >&2
-        fails=$((fails + 1))
-        continue
+        old="$(legacy_dir "$addon")"; new="$(current_dir "$addon")"
+        if [ -n "$old" ] && [ -n "${REF[$addon]:-}" ] && [ -d "$DEPS_DIR/$clone/addons/$old" ]; then
+            printf '  WRN   %s at %s holds the legacy addons/%s, not addons/%s; linked as addons/%s (deprecated: pin a ref that holds addons/%s)\n' \
+                "$repo" "$ref" "$old" "$addon" "$old" "$addon" >&2
+            addon="$old"
+        elif [ -n "$old" ] && [ -d "$DEPS_DIR/$clone/addons/$old" ]; then
+            printf '  FAIL  %s names addons/%s, but %s%s still holds the legacy addons/%s\n' \
+                "$(basename "$PROJECT")" "$addon" "$repo" "${ref:+ at $ref}" "$old" >&2
+            fails=$((fails + 1))
+            continue
+        elif [ -n "$new" ] && [ -d "$DEPS_DIR/$clone/addons/$new" ]; then
+            printf '  FAIL  %s names the legacy addons/%s, but %s%s holds addons/%s: rename it in the project\n' \
+                "$(basename "$PROJECT")" "$addon" "$repo" "${ref:+ at $ref}" "$new" >&2
+            fails=$((fails + 1))
+            continue
+        else
+            printf '  FAIL  %s has no addons/%s\n' "$clone" "$addon" >&2
+            fails=$((fails + 1))
+            continue
+        fi
+    elif [ -n "$(current_dir "$addon")" ]; then
+        printf '  WRN   addons/%s is the legacy name (%s%s); the current one is addons/%s\n' \
+            "$addon" "$repo" "${ref:+ at $ref}" "$(current_dir "$addon")" >&2
     fi
 
     # Replaced unconditionally. A stale link, or a regular file a checkout on a machine
