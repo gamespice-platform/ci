@@ -33,7 +33,7 @@
 # Environment:
 #   SERVER_REPO   default gamespice-platform/server-deploy
 #   DEPS_TOKEN    optional; read access for private repositories (never printed)
-#   DOT_OWNER     default gamespice-platform (the addons; repositories drop the dot- prefix)
+#   GS_OWNER     default gamespice-platform (the addons; repositories drop the dot- prefix)
 #   GAME_OWNER    default zees-games     (zee-dot-weapons and zed-dot-weapons, the addons that are not)
 set -uo pipefail
 
@@ -51,7 +51,7 @@ done
 
 export INPUT SERVER_REF
 export SERVER_REPO="${SERVER_REPO:-gamespice-platform/server-deploy}"
-export DOT_OWNER="${DOT_OWNER:-gamespice-platform}"
+export GS_OWNER="${GS_OWNER:-${DOT_OWNER:-gamespice-platform}}"
 export GAME_OWNER="${GAME_OWNER:-zees-games}"
 
 exec python3 - <<'PY'
@@ -169,7 +169,7 @@ def remote_name(r):
 
 
 def owner_of(r):
-    return os.environ["DOT_OWNER"] if r.startswith("dot-") else os.environ["GAME_OWNER"]
+    return (os.environ.get("GS_OWNER") or os.environ["DOT_OWNER"]) if r.startswith("dot-") else os.environ["GAME_OWNER"]
 
 
 def const(text, name):
@@ -185,7 +185,7 @@ for addon in sorted(needs):
     if r not in lock:
         problems.append(f"needs {addon}, and the server at {ref} does not install it")
         continue
-    source = f"{owner_of(r)}/{remote_name(r) if owner_of(r) == os.environ['DOT_OWNER'] else r}"
+    source = f"{owner_of(r)}/{remote_name(r) if owner_of(r) == (os.environ.get('GS_OWNER') or os.environ['DOT_OWNER']) else r}"
     if addon in LEGACY_DIRS or addon in CURRENT_DIRS:
         # The pack names the directory its game references; the server installs the one its
         # ref holds. Both must agree, or the game's res:// paths miss on that server.

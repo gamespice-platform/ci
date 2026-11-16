@@ -40,7 +40,7 @@
 #
 #   --host-lock FILE (or HOST_LOCK=FILE) names the addons.lock of the shell the pack will
 #   run on. Its pinned addon levels (read by the project's dot-core, DotAddonApi
-#   pinned_levels, from the repositories in DOT_REPOS_ROOT, <project>/.deps, beside the
+#   pinned_levels, from the repositories in GS_REPOS_ROOT, <project>/.deps, beside the
 #   project, TMC_REPOS_DIR, ~/godot) go to dot_requires.gd as --pin, so a
 #   requires.floor.json floor above what that shell ships fails the pack instead of being
 #   judged against the linked head. A lock that reads to no level fails. Without it,
@@ -272,13 +272,13 @@ if [ "$PACK" -eq 1 ]; then
             && grep -q 'func pinned_levels' "$PROJECT/addons/dot_core/core/dot_addon_api.gd" 2>/dev/null \
             || { printf 'the linked dot-core cannot judge floors against a lock (no --pin / pinned_levels); --host-lock needs a newer one\n' >&2; exit 1; }
         pins_out="$("${GODOT:-godot}" --headless --path "$PROJECT" --script "$HERE/lock_pins.gd" -- "$HOST_LOCK" \
-            "${DOT_REPOS_ROOT:-}" "$PROJECT/.deps" "$(dirname "$PROJECT")" "${TMC_REPOS_DIR:-}" "$HOME/godot")" \
+            "${GS_REPOS_ROOT:-${DOT_REPOS_ROOT:-}}" "$PROJECT/.deps" "$(dirname "$PROJECT")" "${TMC_REPOS_DIR:-}" "$HOME/godot")" \
             || { printf 'could not read the addon levels %s pins\n' "$HOST_LOCK" >&2; exit 1; }
         while IFS=$'\t' read -r tag pin; do
             [ "$tag" = pin ] && REQ_PINS+=(--pin "$pin")
         done <<< "$pins_out"
         [ "${#REQ_PINS[@]}" -gt 0 ] \
-            || { printf '%s reads to no addon level (are its repositories in DOT_REPOS_ROOT?)\n' "$HOST_LOCK" >&2; exit 1; }
+            || { printf '%s reads to no addon level (are its repositories in GS_REPOS_ROOT?)\n' "$HOST_LOCK" >&2; exit 1; }
         printf 'floors judged against %d addon levels pinned by %s\n' "$(( ${#REQ_PINS[@]} / 2 ))" "$HOST_LOCK" >&2
     fi
     if [ -f "$PROJECT/addons/dot_core/tools/dot_requires.gd" ]; then

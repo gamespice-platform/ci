@@ -45,7 +45,7 @@
 #
 #   DEPS_TOKEN   a token that can read the private addon repositories
 #   GIT_HOST     default github.com
-#   DOT_OWNER    default gamespice-platform (the addons; their repositories drop the dot- prefix)
+#   GS_OWNER    default gamespice-platform (the addons; their repositories drop the dot- prefix)
 #   GAME_OWNER   default zees-games     (the games, and the weapons packs)
 #
 set -uo pipefail
@@ -57,7 +57,7 @@ MODE="${2:-clone}"
 PROJECT="$(cd "$PROJECT" && pwd -P)"
 
 GIT_HOST="${GIT_HOST:-github.com}"
-DOT_OWNER="${DOT_OWNER:-gamespice-platform}"
+GS_OWNER="${GS_OWNER:-${DOT_OWNER:-gamespice-platform}}"
 GAME_OWNER="${GAME_OWNER:-zees-games}"
 DEPS_DIR="$PROJECT/.deps"
 
@@ -97,15 +97,15 @@ current_dir() {
 addon_owner() {
     case "$1" in
         dot-radio|dot-trail) printf '%s\n' "$GAME_OWNER" ;;
-        dot-*) printf '%s\n' "$DOT_OWNER" ;;
+        dot-*) printf '%s\n' "$GS_OWNER" ;;
         *)     printf '%s\n' "$GAME_OWNER" ;;
     esac
 }
 
-## The name a repository has on the host. The addons live in the DOT_OWNER organisation without the
+## The name a repository has on the host. The addons live in the GS_OWNER organisation without the
 ## `dot-` prefix (dot-audio -> audio); the directory a clone lands in keeps the local name.
 remote_name() {
-    if [ "$1" = "$DOT_OWNER" ]; then printf '%s\n' "${2#dot-}"; else printf '%s\n' "$2"; fi
+    if [ "$1" = "$GS_OWNER" ]; then printf '%s\n' "${2#dot-}"; else printf '%s\n' "$2"; fi
 }
 
 # /addons/ on its own names nothing. The anchored, single-segment pattern is what

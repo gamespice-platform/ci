@@ -56,7 +56,7 @@ scripts/package.sh ../game-arena 0.2.0 --out /tmp/out --pack   # imported first
 
 - Never write a step into a caller; add an input here. `suites` is the one per-repository fact. [design](docs/design.md#one-copy-of-the-knowledge)
 - Moving the Godot version means editing `godot.pin` and dot-server-deploy's `tools/fetch-godot.sh` in one change; take the digest from the release's own `SHA512-SUMS.txt`. [design](docs/design.md#two-things-here-are-copies-and-both-are-deliberate)
-- The owner rule is repeated in `resolve-deps.sh` (`DOT_OWNER`, `GAME_OWNER`, `addon_repo()`); the project list is never copied here. [design](docs/design.md#two-things-here-are-copies-and-both-are-deliberate)
+- The owner rule is repeated in `resolve-deps.sh` (`GS_OWNER`, `GAME_OWNER`, `addon_repo()`); the project list is never copied here. [design](docs/design.md#two-things-here-are-copies-and-both-are-deliberate)
 - Dependencies come from the project's `.gitignore` (`^/addons/[a-z0-9_]+$`, so a bare `/addons/` names nothing) or its `addons.lock` at the locked refs. [design](docs/design.md#what-is-not-copied-and-must-not-be)
 - Workflows check out their own scripts at `github.job_workflow_sha`; `release.yml` never calls `validate.yml`. [design](docs/design.md#traps-worth-not-re-finding)
 - The deps token stays optional; `_redact` must stay a no-op on an empty token; never gate a step on `secrets.` in an `if:`. [design](docs/design.md#traps-worth-not-re-finding)
