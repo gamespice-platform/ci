@@ -151,7 +151,7 @@ fi
 # A game's maps can live in a repository of their own (playlot-maps, the mg-*
 # -maps), linked in by bootstrap.sh from a comment directly above the ignored path:
 #
-#     # bootstrap-link: game-playground-maps/maps ci
+#     # bootstrap-link: playlot-maps/maps ci
 #     /maps/custom
 #
 # Without the link a runner checks a game with none of its maps, and every suite that
