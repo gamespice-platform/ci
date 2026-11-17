@@ -8,10 +8,10 @@ spec = importlib.util.spec_from_file_location(
 sn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sn)
 
-GOOD = ["game/arena_game_combat.gd", "examples/headless_match_modes_and_drops.gd", "docs/partition.md",
+GOOD = ["game/fc_game_combat.gd", "examples/headless_match_modes_and_drops.gd", "docs/partition.md",
         "addons/x/dot_partner.gd", "a/departure_2.gd", "x/helpers.gd", "x/dot_misc_tools.gd",
         "dir/counterpart.gd", "x/spart1.gd", "x/rhino_pt_hull.gd"]
-BAD = ["game/arena_game_part1.gd", "game/arena_game_part2a.gd", "game/arena_game_part2a.gd.uid",
+BAD = ["game/fc_game_part1.gd", "game/fc_game_part2a.gd", "game/fc_game_part2a.gd.uid",
        "examples/headless_net_part10.gd", "part3.gd", "x/foo-part2.md", "x/foo_pt4.py",
        "x/misc.gd", "misc/a.gd", "x/helpers2.gd", "x/Utils3.gd", "x/stuff.md", "a_part1/b.gd"]
 

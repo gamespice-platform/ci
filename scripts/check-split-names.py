@@ -5,8 +5,8 @@
     scripts/check-split-names.py --stdin            # one path per line
 
 A file that outgrew its size is split by responsibility and each piece is named for what
-it holds (`arena_game_combat.gd`, `arena_game_loadouts.gd`), never `arena_game_part1.gd`,
-`arena_game_part2.gd`. Flags a file or directory whose name, without extension, is or ends
+it holds (`fc_game_combat.gd`, `fc_game_loadouts.gd`), never `fc_game_part1.gd`,
+`fc_game_part2.gd`. Flags a file or directory whose name, without extension, is or ends
 in `_part<N>` / `_pt<N>` (an optional single letter after the number: `part2a`), or is
 `part<N>`; or is exactly `misc`, `miscellaneous`, `stuff`, `junk` or `untitled`; or is
 `helpers<N>` / `utils<N>` / `util<N>` / `helper<N>`.

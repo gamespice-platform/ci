@@ -49,7 +49,7 @@ The scripts run on a laptop and should be exercised there first; they take a dir
 ```bash
 GODOT=godot scripts/check.sh ../dot-cloud
 scripts/package.sh ../dot-cloud 0.2.0 --out /tmp/out
-scripts/package.sh ../game-arena 0.2.0 --out /tmp/out --pack   # imported first
+scripts/package.sh ../game-fatal-contact 0.2.0 --out /tmp/out --pack   # imported first
 ```
 
 ## Rules that bite
