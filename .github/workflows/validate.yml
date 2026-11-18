@@ -175,6 +175,11 @@ jobs:
             - name: No numbered or meaningless file names
               run: python3 dot-ci/scripts/check-split-names.py project
 
+            # Every game ships a visual QA entry (dot-game's harness): contact sheets and a clip
+            # verdict for what moves. Escape: `*` in ci/visual-qa.allow, with a reason.
+            - name: Game has a visual QA entry
+              run: python3 dot-ci/scripts/check-visual-qa.py project
+
             # The web origin's CSP has no 'unsafe-eval': JavaScriptBridge.eval throws EvalError there.
             - name: No JavaScript string evaluation
               run: python3 dot-ci/scripts/check-no-js-eval.py project
