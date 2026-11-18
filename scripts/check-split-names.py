@@ -11,6 +11,12 @@ in `_part<N>` / `_pt<N>` (an optional single letter after the number: `part2a`),
 `part<N>`; or is exactly `misc`, `miscellaneous`, `stuff`, `junk` or `untitled`; or is
 `helpers<N>` / `utils<N>` / `util<N>` / `helper<N>`.
 
+A script (`.gd .rs .py .ts .tsx .js .sh .gdshader`) whose name ends in a lone letter (`tests_a`), a
+number (`tests_2`), or a letter plus number and an optional letter (`tests_b1`, `tests_a2`,
+`dedicated_b2a`) is the same thing: a piece numbered or lettered instead of named. Not flagged:
+`_2d`/`_3d`, and the protocol or product names in `SUFFIX_OK` (`a2s`, `e2e`, `x86`, `v2`).
+Scenes and assets are not checked here (`avatar_a.tscn` can be a real variant).
+
 Escape: a path listed (one per line, `#` comments) in `ci/split-names.allow` in the checked
 repository, for vendored third-party names that cannot be changed.
 """
@@ -21,6 +27,21 @@ import sys
 
 SPLIT = re.compile(r"(^|[_.-])(part|pt)[0-9]+[a-z]?$", re.I)
 VAGUE = re.compile(r"^(misc|miscellaneous|stuff|junk|untitled|(helpers?|utils?)[0-9]+)$", re.I)
+
+
+SCRIPT_EXT = (".gd", ".rs", ".py", ".ts", ".tsx", ".js", ".sh", ".gdshader")
+SUFFIX = re.compile(r"_([a-z]|[0-9]+|[a-z][0-9]+[a-z]?)$", re.I)
+SUFFIX_OK = {"a2s", "e2e", "x86", "x64", "i18n", "l10n", "h264", "h265", "sha256", "v1", "v2", "v3", "v4", "v5"}
+
+
+def lettered(name):
+    """True for a script whose stem ends `_a`, `_2`, `_b1`, `_b2a` (a piece numbered, not named)."""
+    base = name.split("/")[-1]
+    s = stem(base)
+    if base.startswith(".") or "." + base[len(s):].lstrip(".").split(".")[0] not in SCRIPT_EXT:
+        return False
+    m = SUFFIX.search(s)
+    return bool(m) and m.group(1).lower() not in SUFFIX_OK
 
 
 def stem(part):
@@ -41,6 +62,9 @@ def problems(paths, allowed=()):
             if VAGUE.match(s):
                 out.append(f"{p}: '{part}' says nothing about what it holds")
                 break
+        else:
+            if lettered(p):
+                out.append(f"{p}: ends in a letter or number; name the piece for what it holds")
     return out
 
 
