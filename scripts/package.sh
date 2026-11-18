@@ -77,6 +77,8 @@ HOST_LOCK="${HOST_LOCK:-}"
 # game's text lives in docs/. DotCloudPublisher drops *.md and the content/<id>/pack.json
 # files list docs/ for the same reason.
 EXCLUDE_DIRS=(addons examples tools screenshots images docs .github)
+# Top-level only; DotCloudPublisher.exclude_roots (addons/dot_cloud/publish) is this list.
+EXCLUDE_ROOTS=(examples tests tools docs ci .github screenshots reports art-src)
 while [ $# -gt 0 ]; do
     case "$1" in
         --out)  OUT="${2:?--out needs a directory}"; shift 2 ;;
@@ -218,6 +220,14 @@ if [ "$PACK" -eq 1 ]; then
     # too, and the two publishers should produce the same pack from the same tree.
     find "$PACK_DIR" -name '*.gd.uid' -type f -delete || exit 1
     find "$PACK_DIR" -name '*.md' -type f -delete || exit 1
+    find "$PACK_DIR" \( -name '*.tmp' -o -name .DS_Store -o -name Thumbs.db -o -name .gitignore -o -name .gitattributes \) -type f -delete || exit 1
+    # Top-level folders nothing loads at runtime (tests, CI, review reports, editable art
+    # sources): the same list DotCloudPublisher.exclude_roots gives, so the pack this
+    # builds and the one dot-cloud's publish_pack.sh builds hold the same files. Roots
+    # only, unlike EXCLUDE_DIRS: a `ci` or `reports` folder inside content stays.
+    for d in "${EXCLUDE_ROOTS[@]}"; do
+        rm -rf "${PACK_DIR:?}/$d" || exit 1
+    done
 
     # The imported outputs, chosen by the .import files that SURVIVED the
     # exclusions rather than by copying .godot/imported whole. That directory holds
@@ -233,13 +243,16 @@ if [ "$PACK" -eq 1 ]; then
     IMPORTED_DIR="_imported"
     imported=0
     missing=0
+    dropped=0
     while IFS= read -r -d '' marker; do
+        found=0
         while IFS= read -r res; do
             rel="${res#res://}"
             if [ -f "$PROJECT/$rel" ]; then
                 mkdir -p "$PACK_DIR/$IMPORTED_DIR" || exit 1
                 cp "$PROJECT/$rel" "$PACK_DIR/$IMPORTED_DIR/${rel#.godot/imported/}" || exit 1
                 imported=$((imported + 1))
+                found=$((found + 1))
             else
                 # A marker naming an output the import did not write is an asset
                 # that will not load from the pack. Said here, where it can be
@@ -249,6 +262,16 @@ if [ "$PACK" -eq 1 ]; then
             fi
         done < <(grep -o 'res://\.godot/imported/[^"]*' "$marker" | sort -u)
         sed -i 's|res://\.godot/imported/|res://'"$IMPORTED_DIR"'/|g' "$marker" || exit 1
+        # The source an imported output stands in for (.glb, .jpg, .png, .wav...) is dead
+        # weight: nothing imports at runtime and every load of its path goes through the
+        # marker to the output. DotCloudPublisher drops it too (ship_import_sources off);
+        # shipping both made a pack 5x the size of the one publish_pack.sh builds. Only
+        # when the marker had an output to stand on.
+        src="${marker%.import}"
+        if [ "$found" -gt 0 ] && [ -f "$src" ]; then
+            rm -f "$src" || exit 1
+            dropped=$((dropped + 1))
+        fi
     done < <(find "$PACK_DIR" -name '*.import' -type f -print0)
 
     [ "$missing" -eq 0 ] || { printf '%d imported outputs are missing; re-import and try again\n' "$missing" >&2; exit 1; }
@@ -304,7 +327,7 @@ if [ "$PACK" -eq 1 ]; then
     # no reference resolves.
     ( cd "$PACK_DIR" && zip -q -r -y "$pack_path" . ) || exit 1
     artifacts+=("$pack_path")
-    printf 'packed the game with %d imported outputs -> %s\n' "$imported" "$(basename "$pack_path")" >&2
+    printf 'packed the game with %d imported outputs (%d import sources left out) -> %s\n' "$imported" "$dropped" "$(basename "$pack_path")" >&2
 fi
 
 # A digest beside each artifact. The release page is not the only thing that consumes
