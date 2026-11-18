@@ -175,6 +175,10 @@ jobs:
             - name: No numbered or meaningless file names
               run: python3 dot-ci/scripts/check-split-names.py project
 
+            # A tracked symlink to itself (or an absolute path) loops hv pre-flight and gpu.sh copies.
+            - name: No self-referential or absolute symlinks
+              run: python3 dot-ci/scripts/check-self-symlinks.py project
+
             # Every game ships a visual QA entry (dot-game's harness): contact sheets and a clip
             # verdict for what moves. Escape: `*` in ci/visual-qa.allow, with a reason.
             - name: Game has a visual QA entry
