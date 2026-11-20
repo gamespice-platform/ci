@@ -7,11 +7,11 @@
 #
 # WHY A RELEASE HAS TO ASK THIS
 #
-# A game pack says which dot-* addon API levels it was built against (requires.json, see
-# dot-core's DotAddonApi). A server checks that list before mounting the pack and refuses
+# A game pack says which gs-* addon API levels it was built against (requires.json, see
+# GameSpice Core's DotAddonApi). A server checks that list before mounting the pack and refuses
 # one it cannot satisfy -- correctly, and too late: by then the pack is published, the
 # site offers it, and a server that restarts onto it boots into "This game needs
-# dot-platform API level 3 or newer; this server has level 2". That happened on
+# GameSpice Platform API level 3 or newer; this server has level 2". That happened on
 # 2026-10-04 with game-airdrift v0.1.5, because the addon release it needed existed only
 # as untagged commits when the game was tagged.
 #
@@ -28,7 +28,7 @@
 # build is refused at Play however new its lock is. The server repository records
 # sha256 of the lock its pinned build came from in web/shell-build.inputs, and a tag
 # whose record disagrees is skipped (a tag with no record predates it and counts). The fix for a failure is never here -- it is to tag the addon, bump the
-# lock, and release dot-server-deploy, then re-tag the game.
+# lock, and release GameSpice Server Deploy, then re-tag the game.
 #
 # Environment:
 #   SERVER_REPO   default gamespice-platform/server-deploy

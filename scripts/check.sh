@@ -61,7 +61,7 @@ ran=0
 ## `git ls-files` rather than `find`, because the two disagree in exactly the place
 ## that matters. An addon repository's own source lives in addons/<its name>/, and the
 ## DEPENDENCIES sit right beside it in that same directory -- so "skip addons/" parses
-## none of dot-cloud and "parse addons/" parses all thirty-one files of dot-core on
+## none of GameSpice Cloud and "parse addons/" parses all thirty-one files of GameSpice Core on
 ## every one of its consumers, turning one broken dependency into a failure reported
 ## against fifty repositories. What separates them is not the path, it is ownership:
 ## the links are gitignored in every project here, which makes the tracked set exactly
@@ -91,7 +91,7 @@ timeout 600 "$GODOT" --headless --path . --import >/dev/null 2>&1
 echo "parsing"
 PARSE_TOOL=addons/dot_core/tools/dot_parse_all.gd
 if [ -f "$PARSE_TOOL" ] && [ -z "${PARSE_PER_FILE:-}" ]; then
-    # ONE process for every script, when the project's dot-core has the tool: about ten
+    # ONE process for every script, when the project's GameSpice Core has the tool: about ten
     # times faster than a start-up per file (66 scripts: 40 s against 4 s) and the same
     # verdicts. The tool prints a PARSE> marker on stderr before each script, so the
     # same rule as below -- ANY unfiltered output is a failure -- still attributes to a
@@ -174,14 +174,14 @@ for scene in $SUITES; do
         # themselves.
         #
         # SCRIPT ERROR, Parse Error and String formatting error (a stray % in a label; the engine prints it without a SCRIPT ERROR) only. NOT the engine's own `ERROR: Condition
-        # "..." is true.`, which was in this pattern until dot-game's suite failed on
+        # "..." is true.`, which was in this pattern until GameSpice Game's suite failed on
         # it: that line comes from inside the engine, several of these suites provoke
         # one ON PURPOSE to prove a no-op is a no-op rather than a crash, and failing
         # on it means the repositories with the most careful tests are the ones that
         # go red. A guard that fires on correct code is a guard people delete. A script error inside a test aborts THAT TEST, not the run: the
         # section had already announced itself, so the section counter is satisfied,
         # the suite reports "0 failed" and quits cleanly with its checks missing.
-        # dot-settings shipped exactly that -- "8 sections, 63 passed, 0 failed", exit
+        # GameSpice Settings shipped exactly that -- "8 sections, 63 passed, 0 failed", exit
         # 0, eight checks that never ran. The engine still printed the error.
         printf '  %sFAIL%s %s exited 0 with a script error in its output\n' "$RED" "$OFF" "$scene"
         fails=$((fails + 1))

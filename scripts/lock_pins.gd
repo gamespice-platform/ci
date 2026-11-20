@@ -1,8 +1,8 @@
 extends SceneTree
 ## The addon API levels an addons.lock pins, for package.sh --host-lock: one `pin<TAB>NAME=LEVEL` line each on stdout.
 ## Usage: godot --headless --path <project> --script <this file> -- <addons.lock> <repos root>...
-## The reading is the project's own dot-core (DotAddonApi.pinned_levels); a root fills only the addons the
-## earlier roots could not read, as dot-server-deploy's tools/pack.gd does. An addon no root reads is left out.
+## The reading is the project's own GameSpice Core (DotAddonApi.pinned_levels); a root fills only the addons the
+## earlier roots could not read, as GameSpice Server Deploy's tools/pack.gd does. An addon no root reads is left out.
 
 
 func _initialize() -> void:

@@ -39,7 +39,7 @@
 #   passes `pack: true`.
 #
 #   --host-lock FILE (or HOST_LOCK=FILE) names the addons.lock of the shell the pack will
-#   run on. Its pinned addon levels (read by the project's dot-core, DotAddonApi
+#   run on. Its pinned addon levels (read by the project's GameSpice Core, DotAddonApi
 #   pinned_levels, from the repositories in GS_REPOS_ROOT, <project>/.deps, beside the
 #   project, TMC_REPOS_DIR, ~/godot) go to dot_requires.gd as --pin, so a
 #   requires.floor.json floor above what that shell ships fails the pack instead of being
@@ -65,12 +65,12 @@ NAME=""
 PACK=0
 PACK_OWNED=0
 HOST_LOCK="${HOST_LOCK:-}"
-# What a game pack never carries, at any depth. addons/ above all: every dot-* addon
+# What a game pack never carries, at any depth. addons/ above all: every gs-* addon
 # is already in the host build, and packing a game with its addons produced an 11 MiB
 # pack of which the game was a fraction. images/ is a README's pictures: every game's
 # preview GIFs went in on 2026-10-03 and the next pack was 71 MiB of a 4 MiB game, every
 # byte of it downloaded by every player on connect and loaded by nothing. The same list
-# dot-server-deploy's content/<id>/pack.json files give, which is what a pack published
+# GameSpice Server Deploy's content/<id>/pack.json files give, which is what a pack published
 # from there holds.
 # docs/ and every *.md are the repository's documentation: read by people and agents,
 # loaded by nothing at runtime (no game opens a .md), and since 2026-10-10 most of a
@@ -185,7 +185,7 @@ fi
 
 # An addon repository takes --pack too: its zip is the install, the pack is the data it
 # publishes to the Workshop (provides.json, weapons/, cfg/). addons/ is left out of the pack
-# by default: the host owns the dot-* addons and the Workshop pack is data only.
+# by default: the host owns the gs-* addons and the Workshop pack is data only.
 # --pack-owned-addons puts this repository's OWN addons (the tracked addons/<name>/plugin.cfg
 # folders above) back in, version-stamped, for a pack that carries its code as well as its
 # data: one a host mounts as an add-on overlay instead of building it in. Linked addons stay
@@ -223,7 +223,7 @@ if [ "$PACK" -eq 1 ]; then
     find "$PACK_DIR" \( -name '*.tmp' -o -name .DS_Store -o -name Thumbs.db -o -name .gitignore -o -name .gitattributes \) -type f -delete || exit 1
     # Top-level folders nothing loads at runtime (tests, CI, review reports, editable art
     # sources): the same list DotCloudPublisher.exclude_roots gives, so the pack this
-    # builds and the one dot-cloud's publish_pack.sh builds hold the same files. Roots
+    # builds and the one GameSpice Cloud's publish_pack.sh builds hold the same files. Roots
     # only, unlike EXCLUDE_DIRS: a `ci` or `reports` folder inside content stays.
     for d in "${EXCLUDE_ROOTS[@]}"; do
         rm -rf "${PACK_DIR:?}/$d" || exit 1
@@ -278,9 +278,9 @@ if [ "$PACK" -eq 1 ]; then
 
     # What the pack needs of the host's addons, as requires.json at its root. A pack's
     # scripts compile against the addons of whatever mounts it, so one built against a
-    # newer dot-net than a player's client has fails to PARSE there, mid-load, with
-    # nothing a person can read; dot-cloud reads this file before mounting and says it
-    # in a sentence instead (see dot-core's DotAddonApi). Derived from the game's own
+    # newer GameSpice Net than a player's client has fails to PARSE there, mid-load, with
+    # nothing a person can read; GameSpice Cloud reads this file before mounting and says it
+    # in a sentence instead (see GameSpice Core's DotAddonApi). Derived from the game's own
     # files at the levels THIS checkout's addons have -- "built against" -- so nobody
     # keeps the list. A game that commits its own keeps control of it, and it is
     # audited here instead: an addon used and not declared, or declared above what
@@ -288,7 +288,7 @@ if [ "$PACK" -eq 1 ]; then
     REQ_TOOL="res://addons/dot_core/tools/dot_requires.gd"
     REQ_PINS=()
     if [ -n "$HOST_LOCK" ]; then
-        # The shell's levels, so a floor is judged against what players run. A dot-core
+        # The shell's levels, so a floor is judged against what players run. A GameSpice Core
         # that cannot take them would ignore --pin and judge against the linked head:
         # failed, not passed, since the caller asked for the check.
         grep -q '"--pin"' "$PROJECT/addons/dot_core/tools/dot_requires.gd" 2>/dev/null \
@@ -315,7 +315,7 @@ if [ "$PACK" -eq 1 ]; then
                 || { printf 'requires.json for %s came out empty\n' "$NAME" >&2; exit 1; }
         fi
     else
-        # A dot-core pinned from before the tool existed. Said, not failed: the pack is
+        # A GameSpice Core pinned from before the tool existed. Said, not failed: the pack is
         # exactly what it was the day before, and a host checks nothing it is not given.
         printf 'note: dot-core has no dot_requires.gd; %s ships without requires.json\n' "$NAME" >&2
     fi

@@ -25,7 +25,7 @@
 # would be a second copy of fifty-odd lists, which is the exact bug projects.tsv was
 # written to stop and which this family has already shipped three times.
 #
-# A project with no /addons/<name> lines needs nothing (dot-core). dot-server-deploy's
+# A project with no /addons/<name> lines needs nothing (GameSpice Core). GameSpice Server Deploy's
 # .gitignore is a bare `/addons/` -- "ignore the lot", which names nothing to link and
 # must not be read as "link everything" -- and its list is its `addons.lock` instead,
 # resolved at the locked refs (see below).
@@ -33,7 +33,7 @@
 # THE OWNER SPLIT IS ENCODED HERE, AND THAT IS A THIRD COPY ON PURPOSE
 #
 # The addons are the organisation's and the games are their author's. projects.tsv is
-# the one list that records which is which, and dot-server-deploy's setup.sh already
+# the one list that records which is which, and GameSpice Server Deploy's setup.sh already
 # carries a second copy of the RULE for the one case that cannot read that file: a
 # fresh box cloning what it needs before dot-bootstrap is on it. A CI runner is the
 # same case -- it has an empty disk and a token, and reaching projects.tsv would mean
@@ -63,7 +63,7 @@ DEPS_DIR="$PROJECT/.deps"
 
 ## The repository an addon directory lives in.
 ##
-## dot_user_avatar -> dot-user-avatar, true for every link in the family except the
+## dot_user_avatar -> GameSpice User Avatar, true for every link in the family except the
 ## weapons packs: each took a prefix (`zee_`, `zed_`) so it could sit on top of the family
 ## without colliding with it, and its repository is named for what it IS rather than for
 ## its prefix (zee-dot-weapons, zed-dot-weapons). Same exception setup.sh's addon_repo()
@@ -116,7 +116,7 @@ mapfile -t ADDONS < <(grep -oE '^/addons/[a-z0-9_]+$' "$PROJECT/.gitignore" 2>/d
 
 # [b]A project with an `addons.lock` is checked at the refs it ships, not at main.[/b]
 #
-# dot-server-deploy's .gitignore is a bare `/addons/` and names nothing, so until this
+# GameSpice Server Deploy's .gitignore is a bare `/addons/` and names nothing, so until this
 # existed its CI could not resolve a single addon and ran with the Godot check switched
 # off -- shell syntax only. Its lock names the release tag of every addon a server
 # installs, and a box clones exactly those (setup.sh). So the lock is the list, and each
@@ -203,7 +203,7 @@ _redact() {
 mkdir -p "$DEPS_DIR" "$PROJECT/addons"
 
 # .gdignore, and it is not belt and braces. The clones land INSIDE the project, so
-# Godot's import pass walks them -- and a second copy of dot-core's scripts under a
+# Godot's import pass walks them -- and a second copy of GameSpice Core's scripts under a
 # different path does not fail as "there are two", it fails as `Class "DotResult"
 # hides a global script class`, once per class, naming files that are all correct.
 # A dot-prefixed directory being skipped is the editor's behaviour and not a promise;

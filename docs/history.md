@@ -8,7 +8,7 @@ dot-server-deploy's `.gitignore` had a bare `/addons/`, which names nothing to l
 
 ## A deliberate engine error failed a suite
 
-The "exited 0 but printed an error" check once matched the engine's own `ERROR: Condition "..." is true.` and failed dot-game's suite, which provokes that message on purpose. The pattern is now `SCRIPT ERROR|Parse Error` only.
+The "exited 0 but printed an error" check once matched the engine's own `ERROR: Condition "..." is true.` and failed GameSpice Game's suite, which provokes that message on purpose. The pattern is now `SCRIPT ERROR|Parse Error` only.
 
 ## Every game would have released `project-<version>`
 

@@ -15,7 +15,7 @@
 # runs unattended on every push, which is the worst possible place to have one.
 #
 # The pin and the digest live in godot.pin beside this script; that file says why it
-# is a copy of dot-server-deploy's and what guards the drift.
+# is a copy of GameSpice Server Deploy's and what guards the drift.
 #
 # Only Linux x86_64 is handled, deliberately. That is what GitHub's runners are, and
 # an untested branch for a platform nothing here runs on is a branch that is wrong

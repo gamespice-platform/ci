@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Checks every profile yml under a project's cfg/ against its schema (dot-profile's profile_check).
+# Checks every profile yml under a project's cfg/ against its schema (GameSpice Profile's profile_check).
 #
 #   GODOT=godot scripts/check-profiles.sh <project-dir> [profile_check args...]
 #
 # Runs after the import so the class cache exists. A project with no cfg/ directory, or one
-# that does not link dot-core's tool, passes having checked nothing. Extra arguments reach the
+# that does not link GameSpice Core's tool, passes having checked nothing. Extra arguments reach the
 # tool (--schema <script> for a project's own kinds, --skip-unknown).
 set -uo pipefail
 dir="${1:-.}"
