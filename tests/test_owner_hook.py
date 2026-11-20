@@ -102,6 +102,70 @@ class OwnerHook(unittest.TestCase):
         self.assertEqual(code, 1, err)
         self.assertIn("debt.gd::big", err)
 
+    def listed_debt(self):
+        """main's debt is listed in its baseline: big.gd::big at 90 lines (CI passes)."""
+        self.write("big.gd", long_func("big", 90))
+        self.git("rm", "-q", "ci/efficiency/size.tsv")
+        self.git("add", "-A")   # --init lists tracked files
+        self.assertEqual(subprocess.run(["python3", os.path.join(SCRIPTS, "check-size.py"), "--init", "."], cwd=self.repo,
+                                        capture_output=True).returncode, 0)
+        return self.commit("listed debt on main")
+
+    def test_moved_debt_function_is_known(self):
+        """vjudge-second-review point 3: moving a function the baseline lists to another file changes its key
+        (big.gd::big -> moved.gd::big); that is the same debt, not a new violation."""
+        for listed in (False, True):
+            with self.subTest(listed=listed):
+                main = self.listed_debt() if listed else self.debt()
+                src = "big.gd" if listed else "debt.gd"
+                os.remove(os.path.join(self.repo, src))
+                self.write("moved.gd", long_func("big", 90))
+                code, err = self.push(self.commit("move the function"), main)
+                self.assertEqual(code, 0, err)
+                self.assertIn("moved.gd::big", err)
+                self.assertIn("(moved)", err)
+                self.git("reset", "-q", "--hard", self.base)
+
+    def test_moved_debt_grown_or_copied_refused(self):
+        main = self.listed_debt()
+        self.write("other.gd", long_func("big", 90))   # a second big() while big.gd::big stays: new debt
+        code, err = self.push(self.commit("copy, not move"), main)
+        self.assertEqual(code, 1, err)
+        self.assertIn("other.gd::big", err)
+        self.git("reset", "-q", "--hard", main)
+        os.remove(os.path.join(self.repo, "big.gd"))
+        self.write("moved.gd", long_func("big", 95))   # moved and grown
+        code, err = self.push(self.commit("move and grow"), main)
+        self.assertEqual(code, 1, err)
+        self.assertIn("moved.gd::big", err)
+
+    def test_raised_baseline_refused(self):
+        """A push that adds or raises a baseline entry passes its own gates; it is refused as what it is."""
+        main = self.listed_debt()
+        self.write("b.gd", long_func("huge", 90))
+        with open(os.path.join(self.repo, "ci/efficiency/size.tsv"), "a") as fh:
+            fh.write("b.gd::huge\t90\n")
+        code, err = self.push(self.commit("adds a long function and lists it"), main)
+        self.assertEqual(code, 1, err)
+        self.assertIn("baseline raised or added: size b.gd::huge 90", err)
+
+    def test_baseline_shrink_and_first_init_pass(self):
+        main = self.listed_debt()
+        self.write("big.gd", long_func("big", 85))
+        subprocess.run(["python3", os.path.join(SCRIPTS, "check-size.py"), "--update", "."], cwd=self.repo,
+                       capture_output=True)
+        main = self.push_ok(self.commit("shrinks the debt"), main)
+        self.assertEqual(subprocess.run(["python3", os.path.join(SCRIPTS, "check-frame-hazards.py"), "--init", "."],
+                                        cwd=self.repo, capture_output=True).returncode, 0)
+        self.write("c.gd", long_func("ok", 5))
+        self.push_ok(self.commit("opts in to another gate"), main)
+
+    def push_ok(self, sha, main):
+        code, err = self.push(sha, main)
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("refusing", err)
+        return sha
+
     def test_crashing_gate_warns(self):
         fake = os.path.join(self.root, "fake-scripts")
         shutil.copytree(SCRIPTS, fake, ignore=shutil.ignore_patterns("__pycache__"))

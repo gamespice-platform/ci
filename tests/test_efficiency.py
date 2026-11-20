@@ -210,6 +210,21 @@ class Duplication(unittest.TestCase):
         self.assertNotIn("game-d-2", out)
 
 
+    def test_origin_url_spellings(self):
+        # vjudge-second-review-1 #4: an ssh URL with a port read as host/2222/org/r and missed its scp-form twin.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("check_duplication", os.path.join(S, "check-duplication.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        same = ["git@github.com:Org/Game-C.git", "git@github.com:org/game-c", "ssh://git@github.com/org/game-c.git",
+                "ssh://git@github.com:22/org/game-c", "ssh://github.com:2222/org/game-c.git/", "https://github.com/org/game-c",
+                "https://user:tok@github.com/org/game-c.git", "git+ssh://git@github.com/org/game-c", "github.com:org/game-c"]
+        self.assertEqual({m.norm_url(u) for u in same}, {"github.com/org/game-c"})
+        self.assertNotEqual(m.norm_url("git@github.com:org/game-c2.git"), m.norm_url("git@github.com:org/game-c.git"))
+        self.assertNotEqual(m.norm_url("git@gitlab.com:org/game-c"), m.norm_url("git@github.com:org/game-c"))
+        self.assertEqual(m.norm_url("/home/gamedev/godot/game-c/.git"), m.norm_url("file:///home/gamedev/godot/game-c"))
+        self.assertEqual(m.norm_url(""), "")
+
 COMMENTS = """extends Node
 # one
 # two

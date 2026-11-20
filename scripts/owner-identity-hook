@@ -60,8 +60,9 @@ check_ident() {   # $1 = GIT_AUTHOR_IDENT | GIT_COMMITTER_IDENT
 # Versioned in dot-ci (scripts/owner-identity-hook, tests/test_owner_hook.py); install with
 #   sudo -u gamedev sudo install -m 755 scripts/owner-identity-hook /usr/local/lib/git-owner-hooks/owner-identity-hook
 # A push is refused only for a violation it adds: a no-op push and a push that changes no .gd file or
-# baseline skip the gates, and a failure the remote's commit already has (debt on main) is reported,
-# not refused. A gate that crashes (no FAIL line) warns and does not refuse.
+# baseline skip the gates, and a failure the remote's commit already has or allows (debt on main, even
+# when the push moves it to another file) is reported, not refused. A push that raises or adds a
+# baseline entry is refused. A gate that crashes (no FAIL line) warns and does not refuse.
 GATE_SCRIPTS=${OWNER_HOOK_GATE_SCRIPTS:-/home/gamedev/godot/dot-ci/scripts}
 GATE_SIBLINGS=${OWNER_HOOK_SIBLINGS:-/home/gamedev/godot}
 
@@ -83,6 +84,90 @@ run_gate() {   # $1 = exported dir, $2 = gate name, $3 = touched list or empty: 
     f=$(printf '%s\n' "$o" | grep -E '^FAIL') || { printf '%s\n' "$o" | tail -3 | sed "s/^/$s crashed: /"; return 2; }
     printf '%s\n' "$f"
     return 1
+}
+
+# Which of the new tree's failures (or baseline entries) the remote's commit already had: prints "K <line>" for
+# known debt and "F <line>" for what this push adds. $1 = the tmp dir holding the exported old/ and new/ trees;
+# $2 and $3 = files of FAIL lines (old, new), or both "baselines" to compare ci/efficiency/*.tsv of old and new.
+# Debt is the old commit's FAIL lines plus its baseline entries. A key matches its own debt at the same or a lower
+# count; a key whose function or file moved (renamed file, function moved to another file) matches debt of the
+# same gate and name whose old place no longer exists, so moving a long function is not a new violation.
+# Each piece of debt covers one key.
+debt_match() {
+    python3 - "$@" <<'PY'
+import os, re, sys
+tmp, was, now = sys.argv[1:4]
+BASE = {"size.tsv": "size", "frame-hazards.tsv": "frame-hazards", "duplication.tsv": "duplication",
+        "cross-duplication.tsv": "duplication (cross-game)"}
+FAIL = re.compile(r"^FAIL (.+?): (\S+) (\d+) ")
+
+
+def fails(path):
+    out = []
+    for ln in open(path, encoding="utf-8", errors="replace"):
+        m = FAIL.match(ln.rstrip("\n"))
+        if m:
+            out.append((m.group(1), m.group(2), int(m.group(3)), ln.rstrip("\n")))
+    return out
+
+
+def baselines(tree):   # a baseline file the old tree lacks is a first --init (opting in), not a raise
+    out = []
+    for f, label in BASE.items():
+        p = os.path.join(tmp, tree, "ci", "efficiency", f)
+        if os.path.isfile(p) and os.path.isfile(os.path.join(tmp, "old", "ci", "efficiency", f)):
+            for ln in open(p, encoding="utf-8", errors="replace"):
+                ln = ln.rstrip("\n")
+                k, _, v = ln.rpartition("\t")
+                if ln and not ln.startswith("#") and v.isdigit():
+                    out.append((label, k, int(v), "%s %s %s" % (label, k, v)))
+    return out
+
+
+def name(key):
+    rel, sep, rest = key.partition("::")
+    return rest if sep else os.path.basename(rel)
+
+
+def gone(key):   # the old place of this key no longer exists in the new tree
+    rel, sep, rest = key.partition("::")
+    p = os.path.join(tmp, "new", rel)
+    if not os.path.isfile(p):
+        return True
+    if not sep:
+        return False
+    fn = re.sub(r"#\d+$", "", rest.split("::")[0])
+    src = open(p, encoding="utf-8", errors="replace").read()
+    return not re.search(r"^\s*(static\s+)?func\s+%s\s*\(" % re.escape(fn), src, re.M)
+
+
+def take(pool, k, n):   # the smallest debt in pool[k] that covers n, removed; None if none does
+    hit = min((c for c in pool.get(k, []) if c >= n), default=None)
+    if hit is not None:
+        pool[k].remove(hit)
+    return hit
+
+
+if was == "baselines":
+    old, new = baselines("old"), baselines("new")
+else:
+    old, new = fails(was) + baselines("old"), fails(now)
+pool = {}
+for label, key, n, _ in old:
+    pool.setdefault((label, key), []).append(n)
+fresh = []
+for item in new:
+    if take(pool, item[:2], item[2]) is None:
+        fresh.append(item)
+    else:
+        print("K " + item[3])
+moved = {}
+for (label, key), counts in pool.items():
+    if counts and gone(key):
+        moved.setdefault((label, name(key)), []).extend(counts)
+for label, key, n, line in fresh:
+    print(("F " + line) if take(moved, (label, name(key)), n) is None else ("K " + line + " (moved)"))
+PY
 }
 
 check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unknown for a new branch)
@@ -113,17 +198,23 @@ check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unkno
         [ $r = 0 ] && continue
         [ $r = 2 ] && { warn="$warn$f
 "; continue; }
-        if [ -n "$old_ok" ]; then   # keep only what the remote's commit does not already fail
-            was=$(run_gate "$tmp/old" $g "$tmp/touched")
-            fresh=$(printf '%s\n' "$f" | while IFS= read -r l; do printf '%s\n' "$was" | grep -qxF -- "$l" || printf '%s\n' "$l"; done)
-            same=$(printf '%s\n' "$f" | while IFS= read -r l; do printf '%s\n' "$was" | grep -qxF -- "$l" && printf '%s\n' "$l"; done)
+        if [ -n "$old_ok" ]; then   # keep only what the remote's commit already fails or its baseline allows
+            (run_gate "$tmp/old" $g "$tmp/touched") > "$tmp/was"   # a subshell: run_gate sets f
+            printf '%s\n' "$f" > "$tmp/now"
+            m=$(debt_match "$tmp" "$tmp/was" "$tmp/now")
+            same=$(printf '%s\n' "$m" | sed -n 's/^K //p')
             [ -n "$same" ] && known="$known$same
 "
-            f=$fresh
+            f=$(printf '%s\n' "$m" | sed -n 's/^F //p')
         fi
         [ -n "$f" ] && out="$out$f
 "
     done
+    if [ -n "$old_ok" ]; then   # a raised or added baseline entry would hide a new failure from the gates above
+        raised=$(debt_match "$tmp" baselines baselines | sed -n 's/^F /baseline raised or added: /p')
+        [ -n "$raised" ] && out="$out$raised
+"
+    fi
     rm -rf "$tmp"
     [ -n "$warn" ] && { echo "pre-push: warning, a gate did not run (not refusing):" >&2; printf '%s' "$warn" | sed '/^$/d; s/^/  /' | head -10 >&2; }
     [ -n "$known" ] && { echo "pre-push: main already fails these (not refusing; fix them at their source):" >&2; printf '%s' "$known" | sed '/^$/d; s/^/  /' | head -10 >&2; }

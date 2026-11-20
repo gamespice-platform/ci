@@ -92,6 +92,23 @@ def scan(roots):
     return {f: len(s) for f, s in dup_lines.items()}, clusters
 
 
+def norm_url(u):
+    """host/path of a git remote URL, the same for every spelling of one repository: scp form (git@host:org/r.git),
+    ssh:// with or without a user or port, https, git+ssh, a trailing .git or slash, case. A local path stays a path."""
+    import re
+    u = u.strip().lower().rstrip("/")
+    if not u:
+        return ""
+    m = re.match(r"^[a-z][a-z0-9+.-]*://(?:[^@/]*@)?([^/:]*)(?::\d*)?(/.*)?$", u)
+    if not m:
+        m = re.match(r"^(?:[^@/:]*@)?([^/:]+):(?!//)(.*)$", u)        # scp form: no slash before the colon
+    host, path = (m.group(1), m.group(2) or "") if m else ("", u)
+    path = path.strip("/")
+    while path.endswith(".git"):
+        path = path[:-4].rstrip("/")
+    return (host + "/" + path) if host else "/" + path
+
+
 def _repo_ids(d):
     """Ways to tell two checkouts are the same repository: the git common dir and the origin URL, normalised."""
     import os
@@ -103,10 +120,8 @@ def _repo_ids(d):
         if r.returncode == 0 and r.stdout.strip():
             ids.add("dir:" + os.path.realpath(r.stdout.strip()))
         r = subprocess.run(["git", "-C", d, "config", "--get", "remote.origin.url"], capture_output=True, text=True, timeout=20)
-        u = r.stdout.strip().lower().rstrip("/")
+        u = norm_url(r.stdout)
         if u:
-            u = u[:-4] if u.endswith(".git") else u
-            u = u.split("@", 1)[-1].replace("ssh://", "").replace("https://", "").replace("http://", "").replace(":", "/")
             ids.add("url:" + u)
     except (OSError, subprocess.SubprocessError):
         pass
