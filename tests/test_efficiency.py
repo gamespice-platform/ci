@@ -139,6 +139,37 @@ class Duplication(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("1 span repositories", out)
 
+    def test_siblings_gate(self):
+        parent = tempfile.mkdtemp()
+        def game(name, files):
+            d = os.path.join(parent, name)
+            for n, body in files.items():
+                os.makedirs(os.path.dirname(os.path.join(d, n)), exist_ok=True)
+                with open(os.path.join(d, n), "w") as fh:
+                    fh.write(body)
+            open(os.path.join(d, "project.godot"), "w").close()
+            subprocess.run(["git", "init", "-q", d])
+            subprocess.run(["git", "-C", d, "add", "-A"])
+            return d
+        me = game("game-a", {"net.gd": "func f():\n" + BLOCK, "own.gd": "func g():\n\tprint(1)\n"})
+        game("game-b", {"x/net_copy.gd": "func f():\n" + BLOCK})
+        game("dot-addon", {"a.gd": "func h():\n" + BLOCK.replace("print", "push")})
+        code, out = run("check-duplication.py", "--siblings", parent, me)
+        self.assertEqual(code, 0)
+        self.assertIn("skipped", out)  # not opted in
+        self.assertEqual(run("check-duplication.py", "--siblings", parent, "--init", me)[0], 0)
+        with open(os.path.join(me, "ci/efficiency/cross-duplication.tsv")) as fh:
+            base = fh.read()
+        self.assertIn("net.gd\t", base)
+        self.assertNotIn("own.gd", base)
+        self.assertEqual(run("check-duplication.py", "--siblings", parent, me)[0], 0)
+        with open(os.path.join(me, "own.gd"), "w") as fh:
+            fh.write("func g():\n" + BLOCK)  # a new copy of another game's code
+        code, out = run("check-duplication.py", "--siblings", parent, me)
+        self.assertEqual(code, 1)
+        self.assertIn("own.gd", out)
+        self.assertIn("GameSpice addon", out)
+
 
 COMMENTS = """extends Node
 # one
