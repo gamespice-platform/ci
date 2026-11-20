@@ -228,6 +228,24 @@ check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unkno
     return 0
 }
 
+# A pushed addon that owns art games vendor (tools/sync-art.sh in the pushed commit): list the games whose
+# vendored copy is stale against it, so new art is never pushed while a game's CI is about to go red
+# (2026-11-20, zee-dot-weapons a5b7b0e). Fast, no Godot: dot-ci/scripts/check-vendored-art.py. Loud, never
+# refusing, unless OWNER_HOOK_VENDORED_ART=strict. OWNER_HOOK_VENDORED_ART=off skips it.
+check_vendored_art() {   # $1 = sha being pushed
+    [ "${OWNER_HOOK_VENDORED_ART:-warn}" = off ] && return 0
+    [ -f "$GATE_SCRIPTS/check-vendored-art.py" ] || return 0
+    git cat-file -e "$1:tools/sync-art.sh" 2>/dev/null || return 0
+    o=$(python3 "$GATE_SCRIPTS/check-vendored-art.py" --addon "$(git rev-parse --show-toplevel)" --ref "$1" --games-root "$GATE_SIBLINGS" 2>&1) && return 0
+    echo "pre-push: games vendor STALE art from this repository (resync them, or CI goes red):" >&2
+    printf '%s\n' "$o" | head -30 | sed 's/^/  /' >&2
+    if [ "${OWNER_HOOK_VENDORED_ART:-warn}" = strict ]; then
+        echo "pre-push: refusing (OWNER_HOOK_VENDORED_ART=strict). Resync the games, or push with OWNER_HOOK_VENDORED_ART=off." >&2
+        return 1
+    fi
+    return 0
+}
+
 rc=0
 case "$hook" in
     pre-commit|pre-merge-commit)
@@ -270,6 +288,7 @@ case "$hook" in
             fi
             for line in $(printf '%s\n' "$input" | awk '$4 != "" && $2 !~ /^0+$/ && ($3 == "refs/heads/main" || $3 == "refs/heads/master") { print $2 ":" $4 }'); do
                 check_gates "${line%%:*}" "${line#*:}" || exit 1
+                check_vendored_art "${line%%:*}" || exit 1
             done
         fi
         local_hook="$(git rev-parse --git-common-dir)/hooks/$hook"

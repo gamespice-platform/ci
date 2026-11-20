@@ -9,6 +9,14 @@ out="$("$here/efficiency-report.sh" "$@")"
 text="$(printf '%s\n' "$out" | tail -n 8; echo)"
 trend="$(printf '%s\n' "$out" | python3 "$here/efficiency-trend.py" --strict)"
 rc=$?
+# Stale vendored art (check-vendored-art.py, no Godot): every addon repository with tools/sync-art.sh is
+# checked against the games that vendor its art. A stale game makes the nightly exit non-zero.
+art=""
+for addon in "${GODOT_ROOT:-$here/../..}"/*/; do
+    [ -f "$addon/tools/sync-art.sh" ] || continue
+    art="$art$(python3 "$here/check-vendored-art.py" --addon "$addon" 2>&1)"$'\n' || rc=1
+done
+[ -n "$art" ] && trend="$trend"$'\n'"vendored art:"$'\n'"$art"
 printf '%s\n%s\n' "$text" "$trend"
 if [ -n "${EFFICIENCY_PANEL_FILE:-}" ]; then
     printf '%s\n%s\n' "$text" "$trend" > "$EFFICIENCY_PANEL_FILE"

@@ -131,6 +131,8 @@ scripts/ci-local.sh ../game-x                  # HEAD of a checkout, checked as 
 
 Run `ci-local.sh` before pushing: `game.sh test` runs against the sibling working trees `addons/` links to, which can be older or newer than the addon tips CI clones, so a green local run says nothing about an addon that moved since.
 
+Before pushing new art from an addon that games vendor (zee-dot-weapons), run `python3 ../dot-ci/scripts/check-vendored-art.py` in it. It reads git objects only, takes about a second, and lists every game under `~/godot` whose vendored copy is stale or missing a weapon model the art table names, with the `tools/sync-art.sh <game>` command that fixes it. The same check runs in the system pre-push hook when the addon's main is pushed (it lists the games and lets the push through; `OWNER_HOOK_VENDORED_ART=strict` refuses, `off` skips) and in `efficiency-nightly.sh`.
+
 With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (dot-core's `DotAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `dot_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
 
 `resolve-deps.sh` wants a token only when it actually clones.
