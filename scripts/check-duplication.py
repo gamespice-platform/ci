@@ -116,6 +116,8 @@ def main():
     p.add_argument("--cross", action="store_true")
     p.add_argument("--siblings", help="directory of sibling game checkouts: gate on code shared with them")
     p.add_argument("--self-path", action="append", default=[], help="checkout of this repository (left out of the siblings)")
+    p.add_argument("--only-from", help="file listing the paths this change touched: only those can fail (a sibling "
+                   "that later copies a file of ours must not fail our unrelated push)")
     a = p.parse_args()
     if a.siblings:
         import os
@@ -128,6 +130,11 @@ def main():
         roots = [(".", a.dir)] + (siblings(a.siblings, own) if os.path.isdir(a.siblings) else [])
         per, clusters = scan(roots)
         cur = {f[2:]: n for f, n in scan.cross.items() if f.startswith(".:")}
+        if a.only_from and not (a.init or a.update):
+            with open(a.only_from, encoding="utf-8") as fh:
+                touched = {ln.strip() for ln in fh if ln.strip()}
+            base = effgate.load_baseline(path)
+            cur = {k: v for k, v in cur.items() if k in touched} | {k: v for k, v in base.items() if k not in touched}
         if a.top:
             show([c for c in clusters if any(l[0].startswith(".:") for l in c[2])
                   and len({l[0].split(":")[0] for l in c[2]}) > 1], a.top)

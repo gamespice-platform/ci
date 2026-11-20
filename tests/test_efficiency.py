@@ -169,6 +169,13 @@ class Duplication(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("own.gd", out)
         self.assertIn("GameSpice addon", out)
+        listed = os.path.join(parent, "touched.txt")
+        with open(listed, "w") as fh:
+            fh.write("net.gd\n")
+        self.assertEqual(run("check-duplication.py", "--siblings", parent, "--only-from", listed, me)[0], 0)
+        with open(listed, "w") as fh:
+            fh.write("own.gd\n")
+        self.assertEqual(run("check-duplication.py", "--siblings", parent, "--only-from", listed, me)[0], 1)
 
 
 COMMENTS = """extends Node
