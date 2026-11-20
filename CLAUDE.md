@@ -22,6 +22,7 @@ This is not a Godot project. It has no `project.godot`, no `addons/`, and nothin
 | `godot.pin` | the runtime version and SHA512 (the second copy; it says which is authoritative) |
 | `scripts/fetch-godot.sh` | fetch and verify the pinned runtime |
 | `scripts/resolve-deps.sh` | addons from `.gitignore` or `addons.lock`, cloned into `.deps/` and linked |
+| `scripts/ci-local.sh <dir>` | the pre-push replica of CI: clones HEAD of a checkout to scratch, resolves addons from their default-branch tips like `validate.yml`, takes `suite-timeout`/`suites` from its `ci.yml`, runs `check.sh`. Differs from `game.sh test`, which uses the sibling working trees |
 | `scripts/check.sh` | import, parse pass, suites, the exit-0 stderr check |
 | `scripts/check-export-filter.sh` | fails a repository whose `export_presets.cfg` or `.example.cfg` has a preset `include_filter` without `cfg/*` |
 | `scripts/check-cfg-names.sh` | fails a repository with a `*` or `?` in any path under a `cfg/` directory (spell per-map globs `surf_%.yml`) |

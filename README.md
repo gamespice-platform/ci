@@ -126,7 +126,10 @@ scripts/fetch-godot.sh --version               # the pinned version
 scripts/resolve-deps.sh ../dot-cloud --print   # what that project declares
 GODOT=godot scripts/check.sh ../dot-cloud      # import, parse, run the suites
 scripts/package.sh ../dot-cloud 0.2.0 --out /tmp/out
+scripts/ci-local.sh ../game-x                  # HEAD of a checkout, checked as CI will (fresh addons from main, ci.yml's timeout and suites)
 ```
+
+Run `ci-local.sh` before pushing: `game.sh test` runs against the sibling working trees `addons/` links to, which can be older or newer than the addon tips CI clones, so a green local run says nothing about an addon that moved since.
 
 With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (dot-core's `DotAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `dot_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
 
