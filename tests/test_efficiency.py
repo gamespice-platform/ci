@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 S = os.path.join(os.path.dirname(__file__), "..", "scripts")
+sys.path.insert(0, S)  # effgate, for the tests that import it
 
 
 def run(script, *args):
@@ -176,6 +177,37 @@ class Duplication(unittest.TestCase):
         with open(listed, "w") as fh:
             fh.write("own.gd\n")
         self.assertEqual(run("check-duplication.py", "--siblings", parent, "--only-from", listed, me)[0], 1)
+
+    def test_siblings_skip_clones_and_hidden(self):
+        # vjudge-solid: a hidden worktree (.wt-*) or a second clone of the game itself (same origin) must not count as
+        # another game, or every line of the game reads as copied; a second clone of a sibling counts once.
+        parent = tempfile.mkdtemp()
+        body = {"u.gd": "func u():\n" + BLOCK.replace("print", "emit")}
+
+        def game(name, origin):
+            d = os.path.join(parent, name)
+            os.makedirs(d)
+            for n, text in body.items():
+                with open(os.path.join(d, n), "w") as fh:
+                    fh.write(text)
+            open(os.path.join(d, "project.godot"), "w").close()
+            subprocess.run(["git", "init", "-q", d])
+            subprocess.run(["git", "-C", d, "remote", "add", "origin", origin])
+            subprocess.run(["git", "-C", d, "add", "-A"])
+            return d
+        me = game("game-c", "git@github.com:org/game-c.git")
+        game(".wt-game-c", "git@github.com:org/game-c.git")
+        game("game-c-old", "https://github.com/org/game-c")
+        self.assertEqual(run("check-duplication.py", "--siblings", parent, "--init", me)[0], 0)
+        with open(os.path.join(me, "ci/efficiency/cross-duplication.tsv")) as fh:
+            self.assertNotIn("u.gd", fh.read())
+        game("game-d", "git@github.com:org/game-d.git")
+        game("game-d-2", "ssh://git@github.com/org/game-d")
+        code, out = run("check-duplication.py", "--siblings", parent, me)
+        self.assertEqual(code, 1)  # a real other game shares u.gd
+        self.assertIn("u.gd", out)
+        self.assertNotIn("game-c-old", out)
+        self.assertNotIn("game-d-2", out)
 
 
 COMMENTS = """extends Node

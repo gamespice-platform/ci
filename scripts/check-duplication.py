@@ -13,7 +13,8 @@ worse. --cross lists the biggest clusters across repositories and never fails.
 
 --siblings is the cross-game gate: the project is scanned together with every sibling game
 checkout in DIR (a git repository with project.godot that is not an addon dot-*, not a *-maps
-repository, not a symlinked alias and not the project itself / --self-path), and the key is a
+repository, not hidden, not a symlinked alias, not the project itself / --self-path and not a second
+checkout of a repository already listed or of this one: same origin URL or git common dir), and the key is a
 file of the project, count: its lines in a region that also exists in another game. Baseline
 ci/efficiency/cross-duplication.tsv; without one the gate passes (the repository has not opted
 in). It exists because games copied each other's wiring instead of extending a GameSpice addon:
@@ -91,16 +92,47 @@ def scan(roots):
     return {f: len(s) for f, s in dup_lines.items()}, clusters
 
 
-def siblings(parent, own):
-    """Sibling game checkouts in parent (see the module doc); own: realpaths to leave out."""
+def _repo_ids(d):
+    """Ways to tell two checkouts are the same repository: the git common dir and the origin URL, normalised."""
     import os
-    out = []
+    import subprocess
+    ids = set()
+    try:
+        r = subprocess.run(["git", "-C", d, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                           capture_output=True, text=True, timeout=20)
+        if r.returncode == 0 and r.stdout.strip():
+            ids.add("dir:" + os.path.realpath(r.stdout.strip()))
+        r = subprocess.run(["git", "-C", d, "config", "--get", "remote.origin.url"], capture_output=True, text=True, timeout=20)
+        u = r.stdout.strip().lower().rstrip("/")
+        if u:
+            u = u[:-4] if u.endswith(".git") else u
+            u = u.split("@", 1)[-1].replace("ssh://", "").replace("https://", "").replace("http://", "").replace(":", "/")
+            ids.add("url:" + u)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return ids
+
+
+def siblings(parent, own):
+    """Sibling game checkouts in parent (see the module doc); own: realpaths to leave out.
+
+    A hidden directory (.wt-*, .release) is never a sibling, and a second checkout or worktree of a repository already
+    listed, or of this one (same origin URL or git common dir), is left out: otherwise a stale clone of the game itself
+    counts every line as shared with another game."""
+    import os
+    out, seen = [], set()
+    for x in own:
+        seen |= _repo_ids(x)
     for n in sorted(os.listdir(parent)):
         d = os.path.join(parent, n)
-        if (os.path.islink(d) or n.startswith("dot-") or n.endswith("-maps")
+        if (n.startswith(".") or os.path.islink(d) or n.startswith("dot-") or n.endswith("-maps")
                 or os.path.realpath(d) in own or not os.path.exists(os.path.join(d, ".git"))
                 or not os.path.isfile(os.path.join(d, "project.godot"))):
             continue
+        ids = _repo_ids(d)
+        if ids & seen:
+            continue
+        seen |= ids
         out.append((n, d))
     return out
 

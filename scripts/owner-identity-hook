@@ -1,0 +1,194 @@
+#!/bin/sh
+# Owner-identity guard, installed system-wide via core.hooksPath in /etc/gitconfig.
+#
+# Every commit that reaches a real remote must be authored AND committed as
+#   Christian Deacon <christianmdeacon@gmail.com>
+# Agents broke this with `git -c user.name=... -c user.email=...`, --author, GIT_AUTHOR_* /
+# GIT_COMMITTER_* env, and by committing as root or a user with no git identity
+# (gamedev@localhost, n@x, g@x, a@b, root@<host>, noreply@anthropic.com as author, ...).
+# The Co-Authored-By trailer in the message is the right place for Claude; never the author.
+#
+# Checks run in pre-commit, pre-merge-commit (identity about to be used) and pre-push (every
+# commit being pushed, which also catches rebase/cherry-pick/amend done under a bad identity).
+# Repositories whose remotes are all local paths (test fixtures) are not checked.
+# After the check, the repository's own .git/hooks/<name> runs, so per-repo hooks keep working.
+
+OWNER_NAME="Christian Deacon"
+OWNER_EMAIL="christianmdeacon@gmail.com"
+hook=$(basename "$0")
+
+fix_hint() {
+    cat >&2 <<EOF
+Fix: commit with git's own config (it is already $OWNER_NAME <$OWNER_EMAIL>): drop
+  -c user.name / -c user.email / --author and unset GIT_AUTHOR_* / GIT_COMMITTER_*.
+Repair commits already made (author and committer):
+  git rebase --exec 'git commit --amend --no-edit --no-verify --reset-author --allow-empty -q' <base>
+  (or for the last commit only: git commit --amend --no-edit --reset-author)
+EOF
+}
+
+is_remote_url() {   # a URL that is not a plain local path / file://
+    case "$1" in
+        ""|/*|./*|../*|file://*) return 1 ;;
+        *:*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+has_real_remote() {
+    for r in $(git remote 2>/dev/null); do
+        is_remote_url "$(git remote get-url "$r" 2>/dev/null)" && return 0
+    done
+    return 1
+}
+
+check_ident() {   # $1 = GIT_AUTHOR_IDENT | GIT_COMMITTER_IDENT
+    id=$(git var "$1" 2>/dev/null) || { echo "$hook: git has no $1 (no user.name/user.email)." >&2; fix_hint; return 1; }
+    name=${id%% <*}
+    email=$(printf '%s' "$id" | sed -n 's/.*<\(.*\)>.*/\1/p')
+    if [ "$name" != "$OWNER_NAME" ] || [ "$email" != "$OWNER_EMAIL" ]; then
+        echo "$hook: refusing, $1 is '$name <$email>', must be '$OWNER_NAME <$OWNER_EMAIL>'." >&2
+        fix_hint
+        return 1
+    fi
+}
+
+# The efficiency gates CI runs ("Efficiency gates (baselines only shrink)"), run here on every commit
+# pushed to main, so a function over 80 lines or a file over 800 is refused before it turns CI red.
+# Only in repositories whose pushed commit has ci/efficiency/size.tsv; the .gd files and baselines of
+# that commit are exported (not the working tree), and dot-ci's own scripts check them.
+# Versioned in dot-ci (scripts/owner-identity-hook, tests/test_owner_hook.py); install with
+#   sudo -u gamedev sudo install -m 755 scripts/owner-identity-hook /usr/local/lib/git-owner-hooks/owner-identity-hook
+# A push is refused only for a violation it adds: a no-op push and a push that changes no .gd file or
+# baseline skip the gates, and a failure the remote's commit already has (debt on main) is reported,
+# not refused. A gate that crashes (no FAIL line) warns and does not refuse.
+GATE_SCRIPTS=${OWNER_HOOK_GATE_SCRIPTS:-/home/gamedev/godot/dot-ci/scripts}
+GATE_SIBLINGS=${OWNER_HOOK_SIBLINGS:-/home/gamedev/godot}
+
+export_tree() {   # $1 = commit, $2 = empty dir: its .gd files and baselines as a fresh repository
+    git archive "$1" -- '*.gd' ci/efficiency 2>/dev/null | tar -x -C "$2" 2>/dev/null || return 1
+    # A repository, so the scripts list files with git ls-files as in CI (their walk skips addons/).
+    (cd "$2" && unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE && git init -q && git add -A) >/dev/null 2>&1
+}
+
+run_gate() {   # $1 = exported dir, $2 = gate name, $3 = touched list or empty: prints FAIL lines; 0 pass, 1 fail, 2 crash
+    if [ "$2" = cross ]; then   # cross-game copies (opt-in: ci/efficiency/cross-duplication.tsv)
+        set -- "$1" check-duplication.py --siblings "$GATE_SIBLINGS" --self-path "${top:-.}" --self-path "${main:-.}" \
+            ${3:+--only-from "$3"}
+    else
+        set -- "$1" "check-$2.py"
+    fi
+    d=$1; s=$2; shift 2
+    o=$(cd "$d" && unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE && python3 "$GATE_SCRIPTS/$s" "$@" . 2>&1) && return 0
+    f=$(printf '%s\n' "$o" | grep -E '^FAIL') || { printf '%s\n' "$o" | tail -3 | sed "s/^/$s crashed: /"; return 2; }
+    printf '%s\n' "$f"
+    return 1
+}
+
+check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unknown for a new branch)
+    sha=$1; old=${2:-}
+    [ "$sha" = "$old" ] && return 0                               # nothing new is pushed
+    [ -f "$GATE_SCRIPTS/check-size.py" ] || return 0
+    git cat-file -e "$sha:ci/efficiency/size.tsv" 2>/dev/null || return 0
+    git cat-file -e "$old^{commit}" 2>/dev/null || old=
+    # A push that changes no .gd file and no baseline cannot change a gate's result.
+    if [ -n "$old" ] && git diff --quiet "$old" "$sha" -- '*.gd' ci/efficiency 2>/dev/null; then return 0; fi
+    tmp=$(mktemp -d) || return 0
+    mkdir "$tmp/new" "$tmp/old"
+    export_tree "$sha" "$tmp/new" || { rm -rf "$tmp"; return 0; }
+    top=$(git rev-parse --show-toplevel 2>/dev/null)
+    main=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)/.." 2>/dev/null && pwd)   # a worktree's main checkout
+    # Only files this push changed can fail the cross gate (a sibling copying our file must not block us);
+    # renames count under the new name. Without the remote's commit: every commit not on a remote yet.
+    if [ -n "$old" ]; then
+        git diff --name-only -M --diff-filter=AMR "$old" "$sha" -- '*.gd' > "$tmp/touched" 2>/dev/null
+    else
+        git log --format= --name-only --diff-filter=AMR "$sha" --not --remotes -- '*.gd' 2>/dev/null | sort -u > "$tmp/touched"
+    fi
+    old_ok=
+    [ -n "$old" ] && git cat-file -e "$old:ci/efficiency/size.tsv" 2>/dev/null && export_tree "$old" "$tmp/old" && old_ok=1
+    out=""; known=""; warn=""
+    for g in size frame-hazards duplication cross; do
+        f=$(run_gate "$tmp/new" $g "$tmp/touched"); r=$?
+        [ $r = 0 ] && continue
+        [ $r = 2 ] && { warn="$warn$f
+"; continue; }
+        if [ -n "$old_ok" ]; then   # keep only what the remote's commit does not already fail
+            was=$(run_gate "$tmp/old" $g "$tmp/touched")
+            fresh=$(printf '%s\n' "$f" | while IFS= read -r l; do printf '%s\n' "$was" | grep -qxF -- "$l" || printf '%s\n' "$l"; done)
+            same=$(printf '%s\n' "$f" | while IFS= read -r l; do printf '%s\n' "$was" | grep -qxF -- "$l" && printf '%s\n' "$l"; done)
+            [ -n "$same" ] && known="$known$same
+"
+            f=$fresh
+        fi
+        [ -n "$f" ] && out="$out$f
+"
+    done
+    rm -rf "$tmp"
+    [ -n "$warn" ] && { echo "pre-push: warning, a gate did not run (not refusing):" >&2; printf '%s' "$warn" | sed '/^$/d; s/^/  /' | head -10 >&2; }
+    [ -n "$known" ] && { echo "pre-push: main already fails these (not refusing; fix them at their source):" >&2; printf '%s' "$known" | sed '/^$/d; s/^/  /' | head -10 >&2; }
+    if [ -n "$out" ]; then
+        echo "pre-push: refusing, $(git rev-parse --short "$sha") adds failures to the efficiency gates CI runs on main:" >&2
+        printf '%s' "$out" | sed '/^$/d; s/^/  /' | head -20 >&2
+        echo "Fix: split the function/file (never raise a baseline); check with python3 $GATE_SCRIPTS/check-size.py . (and check-frame-hazards.py, check-duplication.py [--siblings $GATE_SIBLINGS])." >&2
+        echo "Code shared with another game goes in a GameSpice addon (index: $GATE_SIBLINGS/ADDONS.md); the game extends it." >&2
+        return 1
+    fi
+    return 0
+}
+
+rc=0
+case "$hook" in
+    pre-commit|pre-merge-commit)
+        if has_real_remote; then
+            check_ident GIT_AUTHOR_IDENT || rc=1
+            [ $rc = 0 ] && { check_ident GIT_COMMITTER_IDENT || rc=1; }
+        fi
+        ;;
+    pre-push)
+        url="$2"
+        input=$(cat)
+        if is_remote_url "$url"; then
+            zero=0000000000000000000000000000000000000000
+            bad=$(printf '%s\n' "$input" | while read -r lref lsha rref rsha; do
+                [ -n "$lsha" ] || continue
+                [ "$lsha" = "$zero" ] && continue          # branch delete
+                case "$rref" in refs/heads/*|refs/tags/*) ;; *) continue ;; esac
+                if [ "$rsha" != "$zero" ] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then
+                    range="$lsha ^$rsha"
+                else
+                    range="$lsha --not --remotes"
+                fi
+                # Allowed: the owner; GitHub's own server-side identities (web merges, Actions).
+                git log --format='%h %an <%ae> / %cn <%ce>  %s' $range 2>/dev/null | awk -v n="$OWNER_NAME" -v e="$OWNER_EMAIL" '
+                    { ok = 1
+                      a = $0; sub(/  .*/, "", a)
+                      split(a, p, " / ")
+                      for (i = 1; i <= 2; i++) {
+                        s = p[i]; if (i == 1) sub(/^[0-9a-f]+ /, "", s)
+                        if (s == n " <" e ">") continue
+                        if (s ~ /<noreply@github\.com>$/ || s ~ /<41898282\+github-actions\[bot\]@users\.noreply\.github\.com>$/) continue
+                        ok = 0 }
+                      if (!ok) print }'
+            done)
+            if [ -n "$bad" ]; then
+                echo "pre-push: refusing, these commits are not authored and committed as $OWNER_NAME <$OWNER_EMAIL>:" >&2
+                printf '%s\n' "$bad" | head -20 | sed 's/^/  /' >&2
+                fix_hint
+                exit 1
+            fi
+            for line in $(printf '%s\n' "$input" | awk '$4 != "" && $2 !~ /^0+$/ && ($3 == "refs/heads/main" || $3 == "refs/heads/master") { print $2 ":" $4 }'); do
+                check_gates "${line%%:*}" "${line#*:}" || exit 1
+            done
+        fi
+        local_hook="$(git rev-parse --git-common-dir)/hooks/$hook"
+        if [ -x "$local_hook" ]; then printf '%s\n' "$input" | "$local_hook" "$@"; exit $?; fi
+        exit 0
+        ;;
+esac
+[ $rc = 0 ] || exit 1
+
+# Chain to the repository's own hook (core.hooksPath hides .git/hooks otherwise).
+local_hook="$(git rev-parse --git-common-dir)/hooks/$hook"
+[ -x "$local_hook" ] && exec "$local_hook" "$@"
+exit 0
