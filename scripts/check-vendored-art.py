@@ -10,7 +10,7 @@ zee-dot-weapons a5b7b0e added frag.glb and sticky.glb and five games were stale.
 
 This is the fast, Godot-free form of `sync-art.sh <game> --check`. It reads git objects only:
   * SOURCE: the addon repository's files under assets/ at --ref (default HEAD).
-  * GAME: the game's committed tree on its local main branch.
+  * GAME: the game's committed tree on origin/main (what CI sees), else local main.
 For every assets/<dir> the game vendors (same dir name as in the source):
   * a vendored file that differs from the source is STALE (a .import compares without its uid= line);
   * a source .glb whose name the art table (addons/*/art/zee_weapon_art_table*.gd, not the attachments) writes as a quoted string, and the
@@ -72,7 +72,7 @@ def named_models(addon, ref):
 
 
 def check_game(addon, game, src, dirs, named):
-    branch = "main" if git(game, "rev-parse", "--verify", "-q", "main") else "HEAD"
+    branch = next((b for b in ("origin/main", "main") if git(game, "rev-parse", "--verify", "-q", b)), "HEAD")
     mine = tree(game, branch, "assets")
     if mine is None:
         return None
