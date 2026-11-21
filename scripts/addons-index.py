@@ -69,7 +69,7 @@ def main():
          "",
          "**Check here before writing code into a game.** Code that two games need lives in an addon:",
          "find the addon below (or add the base class to the closest one), put the shared code there,",
-         "and have each game extend it (`extends DotXxx`, override the hooks). Bump the addon's API",
+         "and have each game extend it (`extends GSXxx`, override the hooks). Bump the addon's API",
          "LEVEL and the game's requires.floor.json when the game uses the new API. A new addon only",
          "when none fits. The pre-push gate (check-duplication.py --siblings) refuses new code a game",
          "shares with another game.",

@@ -46,4 +46,4 @@ The addon dependencies come from each project's own `.gitignore`, from its `/add
 
 ## The two publishers must agree
 
-A game's `-pack.zip` from `package.sh --pack` and the pack dot-server-deploy publishes from the same tree must hold the same files under the same paths, with `.godot/imported/` moved to `_imported/` the way `DotCloudPublisher` moves it. After changing what `--pack` includes, build both from one game's tree, decode the deployed pack's manifest payload and diff the paths. The two publishers producing different packs from one tree is the drift to watch for.
+A game's `-pack.zip` from `package.sh --pack` and the pack dot-server-deploy publishes from the same tree must hold the same files under the same paths, with `.godot/imported/` moved to `_imported/` the way `GSCloudPublisher` moves it. After changing what `--pack` includes, build both from one game's tree, decode the deployed pack's manifest payload and diff the paths. The two publishers producing different packs from one tree is the drift to watch for.

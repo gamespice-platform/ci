@@ -39,7 +39,7 @@
 #   passes `pack: true`.
 #
 #   --host-lock FILE (or HOST_LOCK=FILE) names the addons.lock of the shell the pack will
-#   run on. Its pinned addon levels (read by the project's GameSpice Core, DotAddonApi
+#   run on. Its pinned addon levels (read by the project's GameSpice Core, GSAddonApi
 #   pinned_levels, from the repositories in GS_REPOS_ROOT, <project>/.deps, beside the
 #   project, TMC_REPOS_DIR, ~/godot) go to dot_requires.gd as --pin, so a
 #   requires.floor.json floor above what that shell ships fails the pack instead of being
@@ -74,10 +74,10 @@ HOST_LOCK="${HOST_LOCK:-}"
 # from there holds.
 # docs/ and every *.md are the repository's documentation: read by people and agents,
 # loaded by nothing at runtime (no game opens a .md), and since 2026-10-10 most of a
-# game's text lives in docs/. DotCloudPublisher drops *.md and the content/<id>/pack.json
+# game's text lives in docs/. GSCloudPublisher drops *.md and the content/<id>/pack.json
 # files list docs/ for the same reason.
 EXCLUDE_DIRS=(addons examples tools screenshots images docs .github)
-# Top-level only; DotCloudPublisher.exclude_roots (addons/dot_cloud/publish) is this list.
+# Top-level only; GSCloudPublisher.exclude_roots (addons/dot_cloud/publish) is this list.
 EXCLUDE_ROOTS=(examples tests tools docs ci .github screenshots reports art-src)
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -216,13 +216,13 @@ if [ "$PACK" -eq 1 ]; then
             printf 'pack keeps owned addons/%s\n' "$addon" >&2
         done
     fi
-    # A script's .uid sidecar is editor bookkeeping; DotCloudPublisher leaves it out
+    # A script's .uid sidecar is editor bookkeeping; GSCloudPublisher leaves it out
     # too, and the two publishers should produce the same pack from the same tree.
     find "$PACK_DIR" -name '*.gd.uid' -type f -delete || exit 1
     find "$PACK_DIR" -name '*.md' -type f -delete || exit 1
     find "$PACK_DIR" \( -name '*.tmp' -o -name .DS_Store -o -name Thumbs.db -o -name .gitignore -o -name .gitattributes \) -type f -delete || exit 1
     # Top-level folders nothing loads at runtime (tests, CI, review reports, editable art
-    # sources): the same list DotCloudPublisher.exclude_roots gives, so the pack this
+    # sources): the same list GSCloudPublisher.exclude_roots gives, so the pack this
     # builds and the one GameSpice Cloud's publish_pack.sh builds hold the same files. Roots
     # only, unlike EXCLUDE_DIRS: a `ci` or `reports` folder inside content stays.
     for d in "${EXCLUDE_ROOTS[@]}"; do
@@ -237,7 +237,7 @@ if [ "$PACK" -eq 1 ]; then
     # with every marker rewritten to match. A web export cannot read the engine's
     # own reserved directory back out of a mounted pack -- "A required file is not
     # readable after mounting" -- while Linux reads it fine, so a headless check
-    # passes on the platform that does not matter. DotCloudPublisher.IMPORTED_DIR
+    # passes on the platform that does not matter. GSCloudPublisher.IMPORTED_DIR
     # is the same name for the same reason; a marker names its output by absolute
     # path, so the directory can be anything the marker agrees with.
     IMPORTED_DIR="_imported"
@@ -264,7 +264,7 @@ if [ "$PACK" -eq 1 ]; then
         sed -i 's|res://\.godot/imported/|res://'"$IMPORTED_DIR"'/|g' "$marker" || exit 1
         # The source an imported output stands in for (.glb, .jpg, .png, .wav...) is dead
         # weight: nothing imports at runtime and every load of its path goes through the
-        # marker to the output. DotCloudPublisher drops it too (ship_import_sources off);
+        # marker to the output. GSCloudPublisher drops it too (ship_import_sources off);
         # shipping both made a pack 5x the size of the one publish_pack.sh builds. Only
         # when the marker had an output to stand on.
         src="${marker%.import}"
@@ -280,7 +280,7 @@ if [ "$PACK" -eq 1 ]; then
     # scripts compile against the addons of whatever mounts it, so one built against a
     # newer GameSpice Net than a player's client has fails to PARSE there, mid-load, with
     # nothing a person can read; GameSpice Cloud reads this file before mounting and says it
-    # in a sentence instead (see GameSpice Core's DotAddonApi). Derived from the game's own
+    # in a sentence instead (see GameSpice Core's GSAddonApi). Derived from the game's own
     # files at the levels THIS checkout's addons have -- "built against" -- so nobody
     # keeps the list. A game that commits its own keeps control of it, and it is
     # audited here instead: an addon used and not declared, or declared above what

@@ -204,7 +204,7 @@ mkdir -p "$DEPS_DIR" "$PROJECT/addons"
 
 # .gdignore, and it is not belt and braces. The clones land INSIDE the project, so
 # Godot's import pass walks them -- and a second copy of GameSpice Core's scripts under a
-# different path does not fail as "there are two", it fails as `Class "DotResult"
+# different path does not fail as "there are two", it fails as `Class "GSResult"
 # hides a global script class`, once per class, naming files that are all correct.
 # A dot-prefixed directory being skipped is the editor's behaviour and not a promise;
 # this file is the documented way to say it, and it costs nothing.

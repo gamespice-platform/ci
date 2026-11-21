@@ -41,7 +41,7 @@ class Logging(unittest.TestCase):
         self.assertEqual(r, {"base.gd::channel_silent": 1})
 
     def test_dotlog_own_file_exempt(self):
-        self.assertEqual(run({"l.gd": "class_name DotLog\nfunc f():\n\tpush_warning(x)\n"}), {})
+        self.assertEqual(run({"l.gd": "class_name GSLog\nfunc f():\n\tpush_warning(x)\n"}), {})
 
     def test_other_push_warning_counts(self):
         self.assertEqual(run({"o.gd": "func f():\n\tpush_warning(x)\n"}), {"o.gd::push_warning": 1})

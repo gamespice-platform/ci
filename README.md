@@ -77,7 +77,7 @@ The callers still pass `DOT_DEPS_TOKEN`. It is normally empty and `resolve-deps.
 | --- | --- |
 | Every script parses | Imports first, because that registers the `class_name` globals. Then compiles the files git tracks. With dot-core's `tools/dot_parse_all.gd` this is one process; `PARSE_PER_FILE=1` forces one process per script. Any output for a script is a failure. |
 | Linked maps | A comment `# bootstrap-link: <repo>/<dir> ci` above an ignored path in a game's `.gitignore` makes `resolve-deps.sh` shallow-clone that repository and link the folder. The trailing `ci` opts in, because one maps repository is 1.8 GB. |
-| No JavaScript string evaluation | Fails on `JavaScriptBridge.eval`, `DotWeb.eval*`, `eval(` or `new Function(` in tracked `.gd`, `.js` and `.html`. The web origin's CSP forbids it. A real exception carries a `js-eval: allow <reason>` comment. |
+| No JavaScript string evaluation | Fails on `JavaScriptBridge.eval`, `GSWeb.eval*`, `eval(` or `new Function(` in tracked `.gd`, `.js` and `.html`. The web origin's CSP forbids it. A real exception carries a `js-eval: allow <reason>` comment. |
 | No Valve-origin files | Uses dot-cloud's `tools/check_valve_files.py --git`: no `.vpk`, `.vtf`, `.vmt`, `.mdl`, `.vvd`, `.vtx`, `.phy`, `.ani` and no `textures/orig` folder. |
 | Windows-safe names | Fails on `* ? : " < > |` or a backslash in a name, a name ending in a dot or space, a reserved device name (CON, NUL, COM1 and so on) or two paths that differ only by case. |
 | Suites run | Each suite scene runs under a timeout, and its output is read even when it exits 0, because a script error inside a test can leave checks silently unrun. |
@@ -134,7 +134,7 @@ Run `ci-local.sh` before pushing: `game.sh test` runs against the sibling workin
 
 Before pushing new art from an addon that games vendor (zee-dot-weapons), run `python3 ../dot-ci/scripts/check-vendored-art.py` in it. It reads git objects only, takes about a second, and lists every game under `~/godot` whose vendored copy is stale or missing a weapon model the art table names, with the `tools/sync-art.sh <game>` command that fixes it. The same check runs in the system pre-push hook when the addon's main is pushed (it lists the games and lets the push through; `OWNER_HOOK_VENDORED_ART=strict` refuses, `off` skips) and in `efficiency-nightly.sh`.
 
-With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (dot-core's `DotAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `dot_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
+With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (dot-core's `GSAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `dot_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
 
 `resolve-deps.sh` wants a token only when it actually clones.
 

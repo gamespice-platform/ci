@@ -5,7 +5,7 @@
 #   scripts/check-export-filter.sh <project-dir>
 #
 # Godot's exporter packs resources and whatever include_filter names, and .yml is not a
-# resource. dot-core's DotAddonConfig reads res://cfg/addons/<name>/*.yml, so an export
+# resource. dot-core's GSAddonConfig reads res://cfg/addons/<name>/*.yml, so an export
 # without a cfg filter ships without the addon defaults and the missing-directory rule
 # (a missing directory is not an error) hides it. Both export_presets.cfg and the
 # export_presets.example.cfg a repository ships in its place (the editor rewrites the

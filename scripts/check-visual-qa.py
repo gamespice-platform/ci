@@ -26,7 +26,7 @@ def problems(files, modes, allowed=False):
         return []
     out = []
     if ENTRY not in files and not allowed:
-        out.append(f"{ENTRY} is missing: add a visual QA entry that extends DotGameVisualQaCapture "
+        out.append(f"{ENTRY} is missing: add a visual QA entry that extends GSGameVisualQaCapture "
                    "(addons/dot_game/docs/visual-qa.md), or list `*` in ci/visual-qa.allow with the reason")
     if SHOT in files and modes.get(SHOT) != "100755":
         out.append(f"{SHOT} is not executable in git: git update-index --chmod=+x {SHOT}")

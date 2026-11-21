@@ -12,14 +12,14 @@ spec.loader.exec_module(ne)
 class NoJsEval(unittest.TestCase):
     def test_bad(self):
         for path, line in [("a.gd", 'var x = JavaScriptBridge.eval("1", true)'),
-                           ("a.gd", 'DotWeb.eval("window.x")'),
+                           ("a.gd", 'GSWeb.eval("window.x")'),
                            ("a.gd", 'b.call("eval", code)'),
                            ("a.js", "eval('1')"), ("a.html", "x = new Function('return 1')")]:
             self.assertTrue(ne.problems(path, line), line)
 
     def test_good(self):
         for path, line in [("a.gd", "# JavaScriptBridge.eval throws under the CSP"),
-                           ("a.gd", "var x = DotWeb.query_param('a')"),
+                           ("a.gd", "var x = GSWeb.query_param('a')"),
                            ("a.gd", 'JavaScriptBridge.eval("1") # js-eval: allow test harness'),
                            ("a.js", "page.evaluate(() => 1)"), ("a.js", "// eval('x')"),
                            ("a.js", "obj.eval(1)"), ("a.md", "JavaScriptBridge.eval")]:

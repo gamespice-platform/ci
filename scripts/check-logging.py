@@ -4,10 +4,10 @@
     scripts/check-logging.py [--update|--init] [--baseline F] <project-dir>
 
 Kinds: print (print/print_rich in runtime code; examples/, tools/, qa/, editor/, tests and SceneTree/MainLoop scripts are program output and exempt),
-channel_silent (a file declares `const CHANNEL` and never calls `DotLog.`),
+channel_silent (a file declares `const CHANNEL` and never calls `GSLog.`),
 push_warning (any call; it staples an unsuppressible backtrace on a runtime condition).
-A base that declares CHANNEL counts a DotLog use in any subclass (extends by path or class_name).
-DotLog's own file and lines marked `# check-logging: allow push_warning` / `allow print` are exempt.
+A base that declares CHANNEL counts a GSLog use in any subclass (extends by path or class_name).
+GSLog's own file and lines marked `# check-logging: allow push_warning` / `allow print` are exempt.
 Key `path::kind`, count = sites. Baseline: ci/efficiency/logging.tsv.
 """
 import os
@@ -71,8 +71,8 @@ def measure(root):
     for rel, lines in code.items():
         if any(CHANNEL.match(l) for l in lines) and rel not in logs:
             cur[rel + "::channel_silent"] = 1
-        # DotLog's own engine mirror is the one legitimate push_warning.
-        own = any(CLASS_NAME.match(l) and CLASS_NAME.match(l).group(1) == "DotLog" for l in lines)
+        # GSLog's own engine mirror is the one legitimate push_warning.
+        own = any(CLASS_NAME.match(l) and CLASS_NAME.match(l).group(1) == "GSLog" for l in lines)
         n = sum(1 for l, r in zip(lines, raw[rel]) if WARN.search(l) and ALLOW not in r)
         if n and not own:
             cur[rel + "::push_warning"] = n

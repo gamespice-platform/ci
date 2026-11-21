@@ -8,7 +8,7 @@
 # WHY A RELEASE HAS TO ASK THIS
 #
 # A game pack says which gs-* addon API levels it was built against (requires.json, see
-# GameSpice Core's DotAddonApi). A server checks that list before mounting the pack and refuses
+# GameSpice Core's GSAddonApi). A server checks that list before mounting the pack and refuses
 # one it cannot satisfy -- correctly, and too late: by then the pack is published, the
 # site offers it, and a server that restarts onto it boots into "This game needs
 # GameSpice Platform API level 3 or newer; this server has level 2". That happened on
@@ -18,7 +18,7 @@
 # So the same rule is asked here, of the newest RELEASED server: the addons.lock of
 # gamespice-platform/server-deploy's highest v* tag names the ref of every addon a box
 # installs, and each addon's level is the `const LEVEL` / `const OLDEST` in its
-# addons/<addon>/<addon>_api.gd at that ref (absent means 1, as DotAddonApi reads it).
+# addons/<addon>/<addon>_api.gd at that ref (absent means 1, as GSAddonApi reads it).
 # A game passes when, for every addon it names: the lock has it, need <= LEVEL, and
 # need >= OLDEST.
 #
