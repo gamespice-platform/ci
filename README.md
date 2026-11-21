@@ -111,6 +111,7 @@ Opt in with `hygiene: true`. Each gate has a shrink-only baseline under `ci/effi
 | `check-suite-checks.py` | A suite whose `const CHECKS` differs from the total in its last log. |
 | `check-generated.py` | A generated file that differs from what its command in `ci/generated.tsv` produces. |
 | `check-web-size.py` | A web build file over its budget in `ci/web-budget.tsv`. |
+| `web-build-report.py` | Report only: raw and gzip bytes per web build file, and the pck by folder, extension and largest files (reads Godot 4 pcks). Run it before and after an export change. |
 | `comment-report.py`, `duplication-cross.sh` | Reports only; always exit 0. |
 
 ## Profile check
