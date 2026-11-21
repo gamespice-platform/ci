@@ -48,7 +48,7 @@ on:
                 description: >-
                     Directory names, space-separated, left out of the pack on top of
                     addons, examples, tools, screenshots, images and .github. The same list the
-                    game's content/<id>/pack.json gives dot-server-deploy.
+                    game's content/<id>/pack.json gives gs-server-deploy.
                 type: string
                 default: ''
             pack-owned-addons:
@@ -62,7 +62,7 @@ on:
             server-compat:
                 description: >-
                     With `pack`, refuse to release a pack whose requires.json asks for more
-                    than the newest released dot-server-deploy installs (its addons.lock, at
+                    than the newest released gs-server-deploy installs (its addons.lock, at
                     each addon's locked level). False only for a game aimed at a deployment
                     of its own. See scripts/server-compat.sh.
                 type: boolean
@@ -102,7 +102,7 @@ jobs:
               with:
                   repository: gamespice-platform/ci
                   ref: ${{ github.job_workflow_sha }}
-                  path: dot-ci
+                  path: gs-ci
 
             - name: Work out the version
               id: v
@@ -140,12 +140,12 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: ~/.godot-ci
-                  key: godot-${{ hashFiles('dot-ci/godot.pin') }}
+                  key: godot-${{ hashFiles('gs-ci/godot.pin') }}
             - name: Fetch and verify the runtime
               if: inputs.pack
               run: |
-                  version="$(dot-ci/scripts/fetch-godot.sh --version)"
-                  GODOT="$(dot-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/$version)"
+                  version="$(gs-ci/scripts/fetch-godot.sh --version)"
+                  GODOT="$(gs-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/$version)"
                   echo "GODOT=$GODOT" >> "$GITHUB_ENV"
                   "$GODOT" --version
 
@@ -153,7 +153,7 @@ jobs:
               if: inputs.pack
               env:
                   DEPS_TOKEN: ${{ secrets.DEPS_TOKEN }}
-              run: dot-ci/scripts/resolve-deps.sh project
+              run: gs-ci/scripts/resolve-deps.sh project
 
             # One pass, exactly as check.sh runs it, and not gated on its exit code for
             # the same reason check.sh does not: what decides whether the import worked
@@ -177,7 +177,7 @@ jobs:
                       [ "$PACK_OWNED" = "true" ] && args+=(--pack-owned-addons)
                       [ -n "$HOST_LOCK_IN" ] && args+=(--host-lock "project/$HOST_LOCK_IN")
                   fi
-                  dot-ci/scripts/package.sh project "${{ steps.v.outputs.version }}" \
+                  gs-ci/scripts/package.sh project "${{ steps.v.outputs.version }}" \
                       --out "$RUNNER_TEMP/dist" \
                       --name "${{ github.event.repository.name }}" "${args[@]}"
 
@@ -201,7 +201,7 @@ jobs:
               run: |
                   set -euo pipefail
                   for zip in "$RUNNER_TEMP"/dist/*-pack.zip; do
-                      dot-ci/scripts/server-compat.sh "$zip"
+                      gs-ci/scripts/server-compat.sh "$zip"
                   done
             - name: Attach it to the release
               env:

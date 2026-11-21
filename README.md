@@ -25,7 +25,7 @@ jobs:
     validate:
         uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
         secrets:
-            DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
+            DEPS_TOKEN: ${{ secrets.GS_DEPS_TOKEN }}
 ```
 
 `.github/workflows/release.yml`:
@@ -40,7 +40,7 @@ jobs:
     validate:
         uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
         secrets:
-            DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
+            DEPS_TOKEN: ${{ secrets.GS_DEPS_TOKEN }}
     release:
         needs: validate
         uses: gamespice-platform/ci/.github/workflows/release.yml@v1
@@ -54,7 +54,7 @@ The release runs `validate` as its own job instead of calling it from inside `re
 
 Nothing is needed today. Every repository in the family is public, so a clone needs no credential and the checks pass with no secret set.
 
-The callers still pass `DOT_DEPS_TOKEN`. It is normally empty and `resolve-deps.sh` treats it as optional. If a repository goes private, creating the secret is the whole change. It must be a personal or app token, not the built-in `GITHUB_TOKEN`, which only reaches the repository the workflow runs in. Release needs no cloud credential, signing key or registry login.
+The callers still pass `GS_DEPS_TOKEN`. It is normally empty and `resolve-deps.sh` treats it as optional. If a repository goes private, creating the secret is the whole change. It must be a personal or app token, not the built-in `GITHUB_TOKEN`, which only reaches the repository the workflow runs in. Release needs no cloud credential, signing key or registry login.
 
 ## Inputs of `validate.yml`
 
@@ -75,10 +75,10 @@ The callers still pass `DOT_DEPS_TOKEN`. It is normally empty and `resolve-deps.
 
 | Check | What it does |
 | --- | --- |
-| Every script parses | Imports first, because that registers the `class_name` globals. Then compiles the files git tracks. With dot-core's `tools/dot_parse_all.gd` this is one process; `PARSE_PER_FILE=1` forces one process per script. Any output for a script is a failure. |
+| Every script parses | Imports first, because that registers the `class_name` globals. Then compiles the files git tracks. With gs-core's `tools/gs_parse_all.gd` this is one process; `PARSE_PER_FILE=1` forces one process per script. Any output for a script is a failure. |
 | Linked maps | A comment `# bootstrap-link: <repo>/<dir> ci` above an ignored path in a game's `.gitignore` makes `resolve-deps.sh` shallow-clone that repository and link the folder. The trailing `ci` opts in, because one maps repository is 1.8 GB. |
 | No JavaScript string evaluation | Fails on `JavaScriptBridge.eval`, `GSWeb.eval*`, `eval(` or `new Function(` in tracked `.gd`, `.js` and `.html`. The web origin's CSP forbids it. A real exception carries a `js-eval: allow <reason>` comment. |
-| No Valve-origin files | Uses dot-cloud's `tools/check_valve_files.py --git`: no `.vpk`, `.vtf`, `.vmt`, `.mdl`, `.vvd`, `.vtx`, `.phy`, `.ani` and no `textures/orig` folder. |
+| No Valve-origin files | Uses gs-cloud's `tools/check_valve_files.py --git`: no `.vpk`, `.vtf`, `.vmt`, `.mdl`, `.vvd`, `.vtx`, `.phy`, `.ani` and no `textures/orig` folder. |
 | Windows-safe names | Fails on `* ? : " < > |` or a backslash in a name, a name ending in a dot or space, a reserved device name (CON, NUL, COM1 and so on) or two paths that differ only by case. |
 | Suites run | Each suite scene runs under a timeout, and its output is read even when it exits 0, because a script error inside a test can leave checks silently unrun. |
 
@@ -93,11 +93,11 @@ Auto-detection runs `examples/*.tscn` whose name contains `selftest` or starts w
 | Game with `pack: true` | Also `<name>-<version>-pack.zip`: the tracked tree without `addons/`, plus the imported outputs its `.import` markers name (moved to `_imported/`), and a `requires.json` of the addon API levels it needs, so an older client refuses it before mounting. |
 | Maps repository | `release-maps.yml` makes one pack per map: it checks the game out beside the maps, imports, and runs `scripts/package-subpacks.sh`. Inputs are `game`, and optionally `maps-dir`, `link-at` and `game-ref`. |
 
-Every release carries a `SHA256SUMS`. Before a release is created, `scripts/server-compat.sh` checks that the newest `dot-server-deploy` release can run the pack. A game that needs an addon API level no server release has yet fails here. `server-compat: false` opts out. `host-lock: <path>` (with `pack`, a path in the caller's checkout to the host's `addons.lock`) judges `requires.floor.json` against the levels that lock pins; a missing or empty lock fails the release, and leaving it empty changes nothing. A release does not publish to the content origin and does not sign anything. The signing key lives in one deployment on purpose.
+Every release carries a `SHA256SUMS`. Before a release is created, `scripts/server-compat.sh` checks that the newest `gs-server-deploy` release can run the pack. A game that needs an addon API level no server release has yet fails here. `server-compat: false` opts out. `host-lock: <path>` (with `pack`, a path in the caller's checkout to the host's `addons.lock`) judges `requires.floor.json` against the levels that lock pins; a missing or empty lock fails the release, and leaving it empty changes nothing. A release does not publish to the content origin and does not sign anything. The signing key lives in one deployment on purpose.
 
 ## The runtime
 
-`godot.pin` pins one Godot version and its SHA512. A mismatch is fatal. The digests are committed here by a person reading the release's own `SHA512-SUMS.txt`, never read from beside the binary. The pin is a copy of the one in dot-server-deploy, which is authoritative and guards against drift. Move both in the same change.
+`godot.pin` pins one Godot version and its SHA512. A mismatch is fatal. The digests are committed here by a person reading the release's own `SHA512-SUMS.txt`, never read from beside the binary. The pin is a copy of the one in gs-server-deploy, which is authoritative and guards against drift. Move both in the same change.
 
 ## Hygiene gates
 
@@ -124,17 +124,17 @@ They take a directory and work the same on a laptop as on a runner.
 
 ```bash
 scripts/fetch-godot.sh --version               # the pinned version
-scripts/resolve-deps.sh ../dot-cloud --print   # what that project declares
-GODOT=godot scripts/check.sh ../dot-cloud      # import, parse, run the suites
-scripts/package.sh ../dot-cloud 0.2.0 --out /tmp/out
+scripts/resolve-deps.sh ../gs-cloud --print   # what that project declares
+GODOT=godot scripts/check.sh ../gs-cloud      # import, parse, run the suites
+scripts/package.sh ../gs-cloud 0.2.0 --out /tmp/out
 scripts/ci-local.sh ../game-x                  # HEAD of a checkout, checked as CI will (fresh addons from main, ci.yml's timeout and suites)
 ```
 
 Run `ci-local.sh` before pushing: `game.sh test` runs against the sibling working trees `addons/` links to, which can be older or newer than the addon tips CI clones, so a green local run says nothing about an addon that moved since.
 
-Before pushing new art from an addon that games vendor (zee-dot-weapons), run `python3 ../dot-ci/scripts/check-vendored-art.py` in it. It reads git objects only, takes about a second, and lists every game under `~/godot` whose vendored copy is stale or missing a weapon model the art table names, with the `tools/sync-art.sh <game>` command that fixes it. The same check runs in the system pre-push hook when the addon's main is pushed (it lists the games and lets the push through; `OWNER_HOOK_VENDORED_ART=strict` refuses, `off` skips) and in `efficiency-nightly.sh`.
+Before pushing new art from an addon that games vendor (zee-gs-weapons), run `python3 ../gs-ci/scripts/check-vendored-art.py` in it. It reads git objects only, takes about a second, and lists every game under `~/godot` whose vendored copy is stale or missing a weapon model the art table names, with the `tools/sync-art.sh <game>` command that fixes it. The same check runs in the system pre-push hook when the addon's main is pushed (it lists the games and lets the push through; `OWNER_HOOK_VENDORED_ART=strict` refuses, `off` skips) and in `efficiency-nightly.sh`.
 
-With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (dot-core's `GSAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `dot_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
+With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (gs-core's `GSAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `gs_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
 
 `resolve-deps.sh` wants a token only when it actually clones.
 
@@ -147,7 +147,7 @@ With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the ga
 
 ## Why this repository is public
 
-A reusable workflow in a private repository can only be called by repositories of the same account. The family has two owners, so a private dot-ci would serve only half of it. Nothing here is secret: it is YAML and scripts, and every credential arrives from the caller.
+A reusable workflow in a private repository can only be called by repositories of the same account. The family has two owners, so a private gs-ci would serve only half of it. Nothing here is secret: it is YAML and scripts, and every credential arrives from the caller.
 
 ## Status
 

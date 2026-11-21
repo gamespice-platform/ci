@@ -24,7 +24,7 @@ class ValveGuardStep(unittest.TestCase):
 
     def test_guard_runs_in_git_mode_on_the_project_and_is_not_conditional(self):
         body = self._step("No Valve-origin files in the tracked tree")
-        self.assertIn("python3 -I dot-cloud/tools/check_valve_files.py --git project", body)
+        self.assertIn("python3 -I gs-cloud/tools/check_valve_files.py --git project", body)
         self.assertNotIn("if:", body)
 
     def test_guard_runs_after_checkout(self):

@@ -11,7 +11,7 @@ jobs:
     validate:
         uses: gamespice-platform/ci/.github/workflows/validate.yml@v1
 %s        secrets:
-            DEPS_TOKEN: ${{ secrets.DOT_DEPS_TOKEN }}
+            DEPS_TOKEN: ${{ secrets.GS_DEPS_TOKEN }}
 """
 
 

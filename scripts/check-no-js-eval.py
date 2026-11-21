@@ -70,7 +70,7 @@ def main(argv):
     for b in bad:
         print(b)
     if bad:
-        print(f"{len(bad)} JavaScript evaluation(s). Add a named function to dot-core's web/dot_web.js and call it through GSWeb.")
+        print(f"{len(bad)} JavaScript evaluation(s). Add a named function to gs-core's web/gs_web.js and call it through GSWeb.")
         return 1
     return 0
 

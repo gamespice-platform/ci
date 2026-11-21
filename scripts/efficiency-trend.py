@@ -4,7 +4,7 @@
     scripts/efficiency-report.sh | scripts/efficiency-trend.py [--history F] [--strict] [--no-append]
 
 Reads the table efficiency-report.sh prints on stdin. The history is one JSON line per run
-(default ~/.local/state/dot-ci/efficiency-history.jsonl). Output is a few lines for the nightly
+(default ~/.local/state/gs-ci/efficiency-history.jsonl). Output is a few lines for the nightly
 panel: each total, its previous value and the delta. With --strict the exit code is 1 when size
 or hazards grew since the last run, so a regression is a failed check rather than a number.
 """
@@ -15,7 +15,7 @@ import re
 import sys
 import time
 
-DEFAULT = os.path.expanduser("~/.local/state/dot-ci/efficiency-history.jsonl")
+DEFAULT = os.path.expanduser("~/.local/state/gs-ci/efficiency-history.jsonl")
 ROW = re.compile(r"^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\d.]+)%\s*$")
 DUP = re.compile(r"(\d+)\s+(?:duplicate\s+)?clusters?", re.I)
 LOWER_IS_BETTER = ("size", "hazards", "dup_clusters")

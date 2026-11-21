@@ -9,8 +9,8 @@ sn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sn)
 
 GOOD = ["game/fc_game_combat.gd", "examples/headless_match_modes_and_drops.gd", "docs/partition.md",
-        "addons/x/dot_partner.gd", "a/departure_2d.gd", "x/dot_spawn_area_3d.gd", "x/dot_browser_a2s.gd", "x/bake_e2e.gd",
-        "avatars/body_kenney_a.tscn", "x/net_v2.gd", "x/blob_2d.tscn", "x/helpers.gd", "x/dot_misc_tools.gd",
+        "addons/x/gs_partner.gd", "a/departure_2d.gd", "x/gs_spawn_area_3d.gd", "x/gs_browser_a2s.gd", "x/bake_e2e.gd",
+        "avatars/body_kenney_a.tscn", "x/net_v2.gd", "x/blob_2d.tscn", "x/helpers.gd", "x/gs_misc_tools.gd",
         "dir/counterpart.gd", "x/spart1.gd", "x/rhino_pt_hull.gd"]
 BAD = ["game/fc_game_part1.gd", "game/fc_game_part2a.gd", "game/fc_game_part2a.gd.uid",
        "examples/headless_net_part10.gd", "part3.gd", "x/foo-part2.md", "x/foo_pt4.py",

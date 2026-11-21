@@ -154,7 +154,7 @@ class Duplication(unittest.TestCase):
             return d
         me = game("game-a", {"net.gd": "func f():\n" + BLOCK, "own.gd": "func g():\n\tprint(1)\n"})
         game("game-b", {"x/net_copy.gd": "func f():\n" + BLOCK})
-        game("dot-addon", {"a.gd": "func h():\n" + BLOCK.replace("print", "push")})
+        game("gs-addon", {"a.gd": "func h():\n" + BLOCK.replace("print", "push")})
         code, out = run("check-duplication.py", "--siblings", parent, me)
         self.assertEqual(code, 0)
         self.assertIn("skipped", out)  # not opted in
@@ -266,7 +266,7 @@ class Comments(unittest.TestCase):
 
 class Logging(unittest.TestCase):
     BAD = 'const CHANNEL := "x"\nfunc f():\n\tpush_warning("w")\n'
-    GOOD = 'const CHANNEL := "x"\nfunc f():\n\tDotLog.info(CHANNEL, "ok")\n\t# push_warning("no")\n'
+    GOOD = 'const CHANNEL := "x"\nfunc f():\n\tGSLog.info(CHANNEL, "ok")\n\t# push_warning("no")\n'
 
     def test_bad_fails_and_clean_passes(self):
         code, out = run("check-logging.py", project({"a.gd": self.BAD}))

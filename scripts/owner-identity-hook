@@ -56,14 +56,14 @@ check_ident() {   # $1 = GIT_AUTHOR_IDENT | GIT_COMMITTER_IDENT
 # The efficiency gates CI runs ("Efficiency gates (baselines only shrink)"), run here on every commit
 # pushed to main, so a function over 80 lines or a file over 800 is refused before it turns CI red.
 # Only in repositories whose pushed commit has ci/efficiency/size.tsv; the .gd files and baselines of
-# that commit are exported (not the working tree), and dot-ci's own scripts check them.
-# Versioned in dot-ci (scripts/owner-identity-hook, tests/test_owner_hook.py); install with
+# that commit are exported (not the working tree), and gs-ci's own scripts check them.
+# Versioned in gs-ci (scripts/owner-identity-hook, tests/test_owner_hook.py); install with
 #   sudo -u gamedev sudo install -m 755 scripts/owner-identity-hook /usr/local/lib/git-owner-hooks/owner-identity-hook
 # A push is refused only for a violation it adds: a no-op push and a push that changes no .gd file or
 # baseline skip the gates, and a failure the remote's commit already has or allows (debt on main, even
 # when the push moves it to another file) is reported, not refused. A push that raises or adds a
 # baseline entry is refused. A gate that crashes (no FAIL line) warns and does not refuse.
-GATE_SCRIPTS=${OWNER_HOOK_GATE_SCRIPTS:-/home/gamedev/godot/dot-ci/scripts}
+GATE_SCRIPTS=${OWNER_HOOK_GATE_SCRIPTS:-/home/gamedev/godot/gs-ci/scripts}
 GATE_SIBLINGS=${OWNER_HOOK_SIBLINGS:-/home/gamedev/godot}
 
 export_tree() {   # $1 = commit, $2 = empty dir: its .gd files and baselines as a fresh repository
@@ -230,7 +230,7 @@ check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unkno
 
 # A pushed addon that owns art games vendor (tools/sync-art.sh in the pushed commit): list the games whose
 # vendored copy is stale against it, so new art is never pushed while a game's CI is about to go red
-# (2026-11-20, zee-dot-weapons a5b7b0e). Fast, no Godot: dot-ci/scripts/check-vendored-art.py. Loud, never
+# (2026-11-20, zee-gs-weapons a5b7b0e). Fast, no Godot: gs-ci/scripts/check-vendored-art.py. Loud, never
 # refusing, unless OWNER_HOOK_VENDORED_ART=strict. OWNER_HOOK_VENDORED_ART=off skips it.
 check_vendored_art() {   # $1 = sha being pushed
     [ "${OWNER_HOOK_VENDORED_ART:-warn}" = off ] && return 0

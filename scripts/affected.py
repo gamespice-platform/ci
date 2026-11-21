@@ -9,7 +9,7 @@ default the current directory. The change is `git diff HEAD` plus untracked file
 (`REV..HEAD`, for example HEAD~1 for the last commit) or --staged says otherwise.
 
 A consumer is a sibling repository holding a symlink that resolves into REPO (a game's
-`addons/dot_net`, a map repository's `maps/imported`). For each, the changed files' names (class_name,
+`addons/gs_net`, a map repository's `maps/imported`). For each, the changed files' names (class_name,
 file basename) are searched for in the consumer's own code, and the search is followed through the
 files that reference them, three hops, until it reaches a suite (`examples/X.gd` or `X.tscn`). Output
 per consumer: the suites to run, `all` when the change is used but no suite is reached by name

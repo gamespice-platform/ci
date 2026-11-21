@@ -4,7 +4,7 @@
 #
 #   scripts/rollout-caller.sh <repo-dir>
 #
-# 1. Skips (exit 3) a dirty tree, and (exit 0, reported) a repo without a ci.yml that calls dot-ci.
+# 1. Skips (exit 3) a dirty tree, and (exit 0, reported) a repo without a ci.yml that calls gs-ci.
 # 2. Runs each --init that applies and whose baseline file is missing (never overwrites):
 #    check-size, check-frame-hazards, check-duplication (when the repo has .gd files),
 #    check-comments, check-logging, check-markdown-wrap, check-suite-checks, and
@@ -12,7 +12,7 @@
 #    a plain res:// main scene). perf-smoke runs Godot: call this through `heavy --` .
 # 3. Adds `efficiency: true`, `perf: true` (smoke.json exists), `hygiene: true` (logging,
 #    markdown-wrap and suite-checks baselines exist) under `with:` in .github/workflows/ci.yml.
-# 4. One plain `git commit`. Never pushes: push only after the dot-ci v1 tag has moved,
+# 4. One plain `git commit`. Never pushes: push only after the gs-ci v1 tag has moved,
 #    because @v1 rejects inputs it does not declare.
 #
 # Idempotent: a second run finds the baselines and flags in place and commits nothing.
@@ -27,7 +27,7 @@ name="$(basename "$repo")"
 yml="$repo/.github/workflows/ci.yml"
 say() { printf 'rollout %s: %s\n' "$name" "$*"; }
 
-[ -f "$yml" ] && grep -q 'ci/.github/workflows/validate.yml' "$yml" || { say "SKIP no ci.yml calling dot-ci"; exit 0; }
+[ -f "$yml" ] && grep -q 'ci/.github/workflows/validate.yml' "$yml" || { say "SKIP no ci.yml calling gs-ci"; exit 0; }
 if [ -n "$(git -C "$repo" status --porcelain)" ]; then say "SKIP dirty tree"; exit 3; fi
 
 rc=0
@@ -94,7 +94,7 @@ git -C "$repo" add -A ci .github/workflows/ci.yml
 if git -C "$repo" diff --cached --quiet; then say "nothing to do"; exit $rc; fi
 git -C "$repo" commit -q -m "Efficiency gates: baselines and caller flags (${flags[*]:-none})
 
-Flags are only valid once dot-ci's v1 tag has the new inputs; do not push before it moves.
+Flags are only valid once gs-ci's v1 tag has the new inputs; do not push before it moves.
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" && say "committed (${flags[*]:-none}); not pushed"
 exit $rc

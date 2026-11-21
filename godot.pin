@@ -4,14 +4,14 @@
 #
 # THIS IS THE SECOND COPY OF THIS PIN AND THE DRIFT IS GUARDED.
 #
-# The first is dot-server-deploy/tools/fetch-godot.sh, which is authoritative: it is
+# The first is gs-server-deploy/tools/fetch-godot.sh, which is authoritative: it is
 # the pin the containers, the release tarballs and every developer box are built from,
 # and it carries the digests for three platforms because those have to run everywhere.
 # CI only ever needs Linux x86_64, and reaching into a private repository to read one
 # string before it can fetch anything would put that repository in front of every
 # check in the family.
 #
-# So it is copied, and dot-server-deploy's own workflow compares the two and fails
+# So it is copied, and gs-server-deploy's own workflow compares the two and fails
 # when they disagree -- the drift is caused THERE and would be suffered HERE, so the
 # check belongs on the side that can name the person who moved the pin. Moving it
 # means editing both, in the same change.

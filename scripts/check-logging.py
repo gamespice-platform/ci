@@ -16,7 +16,7 @@ import sys
 import effgate
 
 CHANNEL = re.compile(r"^\s*const\s+CHANNEL\b")
-LOG = re.compile(r"\bDotLog\s*\.")
+LOG = re.compile(r"\bGSLog\s*\.")
 WARN = re.compile(r"\bpush_warning\s*\(")
 
 

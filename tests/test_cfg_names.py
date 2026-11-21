@@ -9,8 +9,8 @@ SCRIPT = os.path.join(os.path.dirname(__file__), "..", "scripts", "check-cfg-nam
 
 def check(name):
     d = tempfile.mkdtemp()
-    os.makedirs(os.path.join(d, "cfg", "game", "g", "dot_map", "map"))
-    open(os.path.join(d, "cfg", "game", "g", "dot_map", "map", name), "w").close()
+    os.makedirs(os.path.join(d, "cfg", "game", "g", "gs_map", "map"))
+    open(os.path.join(d, "cfg", "game", "g", "gs_map", "map", name), "w").close()
     return subprocess.run(["bash", SCRIPT, d], capture_output=True, text=True).returncode
 
 

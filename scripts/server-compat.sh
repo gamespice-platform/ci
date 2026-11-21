@@ -34,7 +34,7 @@
 #   SERVER_REPO   default gamespice-platform/server-deploy
 #   DEPS_TOKEN    optional; read access for private repositories (never printed)
 #   GS_OWNER     default gamespice-platform (the addons; repositories drop the dot- prefix)
-#   GAME_OWNER    default zees-games     (zee-dot-weapons and zed-dot-weapons, the addons that are not)
+#   GAME_OWNER    default zees-games     (zee-gs-weapons and zed-gs-weapons, the addons that are not)
 set -uo pipefail
 
 INPUT="${1:-}"
@@ -51,7 +51,7 @@ done
 
 export INPUT SERVER_REF
 export SERVER_REPO="${SERVER_REPO:-gamespice-platform/server-deploy}"
-export GS_OWNER="${GS_OWNER:-${DOT_OWNER:-gamespice-platform}}"
+export GS_OWNER="${GS_OWNER:-gamespice-platform}"
 export GAME_OWNER="${GAME_OWNER:-zees-games}"
 
 exec python3 - <<'PY'
@@ -160,16 +160,16 @@ def repo_of(addon):
     if addon in ("fc_weapons", "arena_weapons"):
         return "fc-weapons"
     if addon in ("zee_weapons", "zed_weapons"):
-        return addon.replace("_weapons", "-dot-weapons")
+        return addon.replace("_weapons", "-gs-weapons")
     return addon.replace("_", "-")
 
 
 def remote_name(r):
-    return r[len("dot-"):] if r.startswith("dot-") else r
+    return r[len("gs-"):] if r.startswith("gs-") else r
 
 
 def owner_of(r):
-    return (os.environ.get("GS_OWNER") or os.environ["DOT_OWNER"]) if r.startswith("dot-") else os.environ["GAME_OWNER"]
+    return os.environ["GS_OWNER"] if r.startswith("gs-") else os.environ["GAME_OWNER"]
 
 
 def const(text, name):
@@ -185,7 +185,7 @@ for addon in sorted(needs):
     if r not in lock:
         problems.append(f"needs {addon}, and the server at {ref} does not install it")
         continue
-    source = f"{owner_of(r)}/{remote_name(r) if owner_of(r) == (os.environ.get('GS_OWNER') or os.environ['DOT_OWNER']) else r}"
+    source = f"{owner_of(r)}/{remote_name(r) if owner_of(r) == (os.environ.get('GS_OWNER') or os.environ['GS_OWNER']) else r}"
     if addon in LEGACY_DIRS or addon in CURRENT_DIRS:
         # The pack names the directory its game references; the server installs the one its
         # ref holds. Both must agree, or the game's res:// paths miss on that server.

@@ -65,7 +65,7 @@ jobs:
               with:
                   repository: gamespice-platform/ci
                   ref: ${{ github.job_workflow_sha }}
-                  path: dot-ci
+                  path: gs-ci
             - name: Work out the version
               id: v
               env:
@@ -93,17 +93,17 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: ~/.godot-ci
-                  key: godot-${{ hashFiles('dot-ci/godot.pin') }}
+                  key: godot-${{ hashFiles('gs-ci/godot.pin') }}
             - name: Fetch and verify the runtime
               run: |
-                  version="$(dot-ci/scripts/fetch-godot.sh --version)"
-                  GODOT="$(dot-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/$version)"
+                  version="$(gs-ci/scripts/fetch-godot.sh --version)"
+                  GODOT="$(gs-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/$version)"
                   echo "GODOT=$GODOT" >> "$GITHUB_ENV"
                   "$GODOT" --version
             - name: Resolve the addons the game declares
               env:
                   DEPS_TOKEN: ${{ secrets.DEPS_TOKEN }}
-              run: dot-ci/scripts/resolve-deps.sh project
+              run: gs-ci/scripts/resolve-deps.sh project
             - name: Link the maps in where the game looks for them
               env:
                   MAPS_DIR: ${{ inputs.maps-dir }}
@@ -121,7 +121,7 @@ jobs:
                   LINK_AT: ${{ inputs.link-at }}
               run: |
                   set -euo pipefail
-                  GODOT="$GODOT" dot-ci/scripts/package-subpacks.sh project \
+                  GODOT="$GODOT" gs-ci/scripts/package-subpacks.sh project \
                       "${{ steps.v.outputs.version }}" --root "$LINK_AT" --out "$RUNNER_TEMP/dist"
             - name: Attach them to the release
               env:

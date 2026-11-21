@@ -1,4 +1,4 @@
-# dot-ci design
+# gs-ci design
 
 Why the shared CI is shaped the way it is. [README.md](../README.md) is the interface and explains the inputs; this file is the reasoning behind the parts a maintainer is most likely to "simplify". The rules are one line each in [CLAUDE.md](../CLAUDE.md).
 
@@ -10,9 +10,9 @@ The one exception is `suites`, and it is an input for the same reason: the fact 
 
 ## Two things here are copies, and both are deliberate
 
-**The Godot pin.** `godot.pin` is a copy of dot-server-deploy's `tools/fetch-godot.sh` pin, which is authoritative. Reaching into another repository to read one string would put that repository in front of every check in the family. The drift is guarded from the other side: dot-server-deploy's own workflow compares the two and fails, because the drift is caused there and suffered here, and a check belongs where it can name the person who moved the pin. Moving the version means editing both, in one change.
+**The Godot pin.** `godot.pin` is a copy of gs-server-deploy's `tools/fetch-godot.sh` pin, which is authoritative. Reaching into another repository to read one string would put that repository in front of every check in the family. The drift is guarded from the other side: gs-server-deploy's own workflow compares the two and fails, because the drift is caused there and suffered here, and a check belongs where it can name the person who moved the pin. Moving the version means editing both, in one change.
 
-**The owner rule.** Addons are the organisation's, games (and the weapons packs) are their author's. `resolve-deps.sh` encodes that as two defaults, `GS_OWNER` and `GAME_OWNER`, plus `addon_repo()` for the weapons packs (`zee_weapons`, `zed_weapons`), whose repositories are not named after their directories. dot-bootstrap's `projects.tsv` is the one list; dot-server-deploy's setup carries a second copy of the rule for a fresh box that has to clone before dot-bootstrap is on it. A runner is the same case (an empty disk and a token), and reaching `projects.tsv` would mean cloning dot-bootstrap first to find out where to clone dot-core from. The rule is repeated; the list is not. If a third owner ever appears, that is the moment this stops being defensible and the list has to be fetched.
+**The owner rule.** Addons are the organisation's, games (and the weapons packs) are their author's. `resolve-deps.sh` encodes that as two defaults, `GS_OWNER` and `GAME_OWNER`, plus `addon_repo()` for the weapons packs (`zee_weapons`, `zed_weapons`), whose repositories are not named after their directories. gs-bootstrap's `projects.tsv` is the one list; gs-server-deploy's setup carries a second copy of the rule for a fresh box that has to clone before gs-bootstrap is on it. A runner is the same case (an empty disk and a token), and reaching `projects.tsv` would mean cloning gs-bootstrap first to find out where to clone gs-core from. The rule is repeated; the list is not. If a third owner ever appears, that is the moment this stops being defensible and the list has to be fetched.
 
 ## What is not copied, and must not be
 
@@ -24,7 +24,7 @@ The addon dependencies come from each project's own `.gitignore`, from its `/add
 
 **`github.job_workflow_sha` is how a reusable workflow checks out its own scripts.** Pinning to `@main` instead would let a change here reach sixty repositories at once with nothing having been run against it. A reusable workflow cannot take an expression for a `ref:` in a `uses:`, which is also why `release.yml` does not call `validate.yml`: the caller does both and joins them with `needs`.
 
-**The deps token is optional and must stay optional.** A public clone needs no credential; a script that demanded one would fail every check in the family over a secret nothing needs. Callers pass an empty `DOT_DEPS_TOKEN` anyway, so the day a repository goes private the fix is creating the secret, not sixty commits. `_redact` is a no-op when the token is empty on purpose: `sed "s||***|g"` with an empty pattern matches at every position and would print a wall of asterisks where the clone error should be.
+**The deps token is optional and must stay optional.** A public clone needs no credential; a script that demanded one would fail every check in the family over a secret nothing needs. Callers pass an empty `GS_DEPS_TOKEN` anyway, so the day a repository goes private the fix is creating the secret, not sixty commits. `_redact` is a no-op when the token is empty on purpose: `sed "s||***|g"` with an empty pattern matches at every position and would print a wall of asterisks where the clone error should be.
 
 **Secrets are not available in a job-level `if:`.** `if: secrets.DEPS_TOKEN != ''` silently evaluates to false and the step is skipped, which looks like the step passing. So `resolve-deps.sh` decides for itself: a project declaring no addons exits 0 having done nothing, and one declaring some with no token fails and says which.
 
@@ -38,12 +38,12 @@ The addon dependencies come from each project's own `.gitignore`, from its `/add
 
 **`unzip` answers a write error by asking.** On a runner with nobody to answer, that is a job that hangs rather than fails. Hence `< /dev/null` in `fetch-godot.sh`.
 
-**`git ls-files` rather than `find`, for both the parse list and the artifact.** An addon repository's own source lives in `addons/<its name>/` and its dependencies sit right beside it, so "skip addons/" parses none of the repository and "parse addons/" parses all of dot-core on every one of its consumers, turning one broken dependency into a failure reported against the whole family. What separates them is ownership, not path, and the links being gitignored is what makes git the thing that knows.
+**`git ls-files` rather than `find`, for both the parse list and the artifact.** An addon repository's own source lives in `addons/<its name>/` and its dependencies sit right beside it, so "skip addons/" parses none of the repository and "parse addons/" parses all of gs-core on every one of its consumers, turning one broken dependency into a failure reported against the whole family. What separates them is ownership, not path, and the links being gitignored is what makes git the thing that knows.
 
 ## `requires.json`: nothing here keeps the list
 
-`package.sh --pack` runs dot-core's `tools/dot_requires.gd` against the imported checkout and writes `requires.json` into the pack: every addon whose global classes or `res://addons/<x>/` paths the game's files name, at the level that addon's `<addon>_api.gd` declares (1 when it has none). dot-cloud reads it before mounting. A committed `requires.json` wins and is audited with `--check` instead. It is derived from what the runner resolved, which is the pinned `.deps`, so "built against" means what was actually built against. A dot-core too old to have the tool gets a note, not a failure: the pack is then exactly what it was before the tool existed.
+`package.sh --pack` runs gs-core's `tools/gs_requires.gd` against the imported checkout and writes `requires.json` into the pack: every addon whose global classes or `res://addons/<x>/` paths the game's files name, at the level that addon's `<addon>_api.gd` declares (1 when it has none). gs-cloud reads it before mounting. A committed `requires.json` wins and is audited with `--check` instead. It is derived from what the runner resolved, which is the pinned `.deps`, so "built against" means what was actually built against. A gs-core too old to have the tool gets a note, not a failure: the pack is then exactly what it was before the tool existed.
 
 ## The two publishers must agree
 
-A game's `-pack.zip` from `package.sh --pack` and the pack dot-server-deploy publishes from the same tree must hold the same files under the same paths, with `.godot/imported/` moved to `_imported/` the way `GSCloudPublisher` moves it. After changing what `--pack` includes, build both from one game's tree, decode the deployed pack's manifest payload and diff the paths. The two publishers producing different packs from one tree is the drift to watch for.
+A game's `-pack.zip` from `package.sh --pack` and the pack gs-server-deploy publishes from the same tree must hold the same files under the same paths, with `.godot/imported/` moved to `_imported/` the way `GSCloudPublisher` moves it. After changing what `--pack` includes, build both from one game's tree, decode the deployed pack's manifest payload and diff the paths. The two publishers producing different packs from one tree is the drift to watch for.

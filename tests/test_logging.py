@@ -29,11 +29,11 @@ class Logging(unittest.TestCase):
         self.assertEqual(run({"a.gd": BASE}), {"a.gd::channel_silent": 1})
 
     def test_subclass_by_path_logs(self):
-        r = run({"c/base.gd": BASE, "c/sub.gd": 'extends "base.gd"\nfunc f():\n\tDotLog.info(CHANNEL, "m")\n'})
+        r = run({"c/base.gd": BASE, "c/sub.gd": 'extends "base.gd"\nfunc f():\n\tGSLog.info(CHANNEL, "m")\n'})
         self.assertEqual(r, {})
 
     def test_subclass_by_class_name_logs(self):
-        r = run({"base.gd": "class_name Base\n" + BASE, "s.gd": "extends Base\nfunc f():\n\tDotLog.info(CHANNEL, 'm')\n"})
+        r = run({"base.gd": "class_name Base\n" + BASE, "s.gd": "extends Base\nfunc f():\n\tGSLog.info(CHANNEL, 'm')\n"})
         self.assertEqual(r, {})
 
     def test_subclass_silent_too(self):

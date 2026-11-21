@@ -9,7 +9,7 @@
 # stale pull each happens to hold. CI runs the COMMITTED tree with every addon freshly
 # cloned from the tip of its default branch (resolve-deps.sh), the suite timeout from the
 # caller's ci.yml, and the suites it names. Those differ, and the difference is where
-# "green here, red in CI" lives. 2026-11-20: zee-dot-weapons main named two new weapon
+# "green here, red in CI" lives. 2026-11-20: zee-gs-weapons main named two new weapon
 # models; each game that vendors a copy of that art went red in CI while its last local
 # run, made before the addon moved, was green.
 #

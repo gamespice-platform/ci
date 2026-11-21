@@ -12,7 +12,7 @@ lines of it that sit in a duplicated region, so a copy cannot be added and a fil
 worse. --cross lists the biggest clusters across repositories and never fails.
 
 --siblings is the cross-game gate: the project is scanned together with every sibling game
-checkout in DIR (a git repository with project.godot that is not an addon dot-*, not a *-maps
+checkout in DIR (a git repository with project.godot that is not an addon gs-*, not a *-maps
 repository, not hidden, not a symlinked alias, not the project itself / --self-path and not a second
 checkout of a repository already listed or of this one: same origin URL or git common dir), and the key is a
 file of the project, count: its lines in a region that also exists in another game. Baseline
@@ -140,7 +140,7 @@ def siblings(parent, own):
         seen |= _repo_ids(x)
     for n in sorted(os.listdir(parent)):
         d = os.path.join(parent, n)
-        if (n.startswith(".") or os.path.islink(d) or n.startswith("dot-") or n.endswith("-maps")
+        if (n.startswith(".") or os.path.islink(d) or n.startswith("gs-") or n.endswith("-maps")
                 or os.path.realpath(d) in own or not os.path.exists(os.path.join(d, ".git"))
                 or not os.path.isfile(os.path.join(d, "project.godot"))):
             continue

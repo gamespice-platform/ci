@@ -9,7 +9,7 @@
 #
 # The links in addons/ are gitignored in every project here, on purpose: a consumer
 # copies the addon folder into its own tree rather than depending on a checkout of
-# ours. So a fresh `git clone` of any project except dot-core opens with no addons,
+# ours. So a fresh `git clone` of any project except gs-core opens with no addons,
 # and in GDScript that is not a missing-feature situation -- a script that MENTIONS a
 # class_name the project does not have fails to parse, and takes every script that
 # references it down with it. One unresolved addon is a hundred parse errors that name
@@ -35,9 +35,9 @@
 # The addons are the organisation's and the games are their author's. projects.tsv is
 # the one list that records which is which, and GameSpice Server Deploy's setup.sh already
 # carries a second copy of the RULE for the one case that cannot read that file: a
-# fresh box cloning what it needs before dot-bootstrap is on it. A CI runner is the
+# fresh box cloning what it needs before gs-bootstrap is on it. A CI runner is the
 # same case -- it has an empty disk and a token, and reaching projects.tsv would mean
-# cloning dot-bootstrap first to find out where to clone dot-core from. So the rule is
+# cloning gs-bootstrap first to find out where to clone gs-core from. So the rule is
 # repeated, in two lines, and not the list.
 #
 # CREDENTIALS come from the environment and never from an argument: an argument is in
@@ -57,22 +57,22 @@ MODE="${2:-clone}"
 PROJECT="$(cd "$PROJECT" && pwd -P)"
 
 GIT_HOST="${GIT_HOST:-github.com}"
-GS_OWNER="${GS_OWNER:-${DOT_OWNER:-gamespice-platform}}"
+GS_OWNER="${GS_OWNER:-gamespice-platform}"
 GAME_OWNER="${GAME_OWNER:-zees-games}"
 DEPS_DIR="$PROJECT/.deps"
 
 ## The repository an addon directory lives in.
 ##
-## dot_user_avatar -> GameSpice User Avatar, true for every link in the family except the
+## gs_user_avatar -> GameSpice User Avatar, true for every link in the family except the
 ## weapons packs: each took a prefix (`zee_`, `zed_`) so it could sit on top of the family
 ## without colliding with it, and its repository is named for what it IS rather than for
-## its prefix (zee-dot-weapons, zed-dot-weapons). Same exception setup.sh's addon_repo()
+## its prefix (zee-gs-weapons, zed-gs-weapons). Same exception setup.sh's addon_repo()
 ## carries. fc-weapons (Fatal Contact's weapons) holds addons/fc_weapons; its tags up to
 ## v1.4.51 hold the legacy addons/arena_weapons, which still maps here (see legacy_dir).
 addon_repo() {
     case "$1" in
-        zee_weapons) printf 'zee-dot-weapons\n' ;;
-        zed_weapons) printf 'zed-dot-weapons\n' ;;
+        zee_weapons) printf 'zee-gs-weapons\n' ;;
+        zed_weapons) printf 'zed-gs-weapons\n' ;;
         fc_weapons|arena_weapons) printf 'fc-weapons\n' ;;
         *)           printf '%s\n' "${1//_/-}" ;;
     esac
@@ -96,16 +96,16 @@ current_dir() {
 ## Who owns it. See the note above about why this rule is here and the list is not.
 addon_owner() {
     case "$1" in
-        dot-radio|dot-trail) printf '%s\n' "$GAME_OWNER" ;;
-        dot-*) printf '%s\n' "$GS_OWNER" ;;
+        gs-radio|gs-trail) printf '%s\n' "$GAME_OWNER" ;;
+        gs-*) printf '%s\n' "$GS_OWNER" ;;
         *)     printf '%s\n' "$GAME_OWNER" ;;
     esac
 }
 
 ## The name a repository has on the host. The addons live in the GS_OWNER organisation without the
-## `dot-` prefix (dot-audio -> audio); the directory a clone lands in keeps the local name.
+## `gs-` prefix (gs-audio -> audio); the directory a clone lands in keeps the local name.
 remote_name() {
-    if [ "$1" = "$GS_OWNER" ]; then printf '%s\n' "${2#dot-}"; else printf '%s\n' "$2"; fi
+    if [ "$1" = "$GS_OWNER" ]; then printf '%s\n' "${2#gs-}"; else printf '%s\n' "$2"; fi
 }
 
 # /addons/ on its own names nothing. The anchored, single-segment pattern is what
@@ -135,8 +135,8 @@ if [ -f "$LOCK" ]; then
         [ -z "$repo" ] && continue
         case "$repo" in \#*) continue ;; esac
         case "$repo" in
-            zee-dot-weapons) addon=zee_weapons ;;
-            zed-dot-weapons) addon=zed_weapons ;;
+            zee-gs-weapons) addon=zee_weapons ;;
+            zed-gs-weapons) addon=zed_weapons ;;
             fc-weapons)      addon=fc_weapons ;;  # refs up to v1.4.51 hold the legacy arena_weapons: decided after the clone
             *)               addon="${repo//-/_}" ;;
         esac
@@ -206,7 +206,7 @@ mkdir -p "$DEPS_DIR" "$PROJECT/addons"
 # Godot's import pass walks them -- and a second copy of GameSpice Core's scripts under a
 # different path does not fail as "there are two", it fails as `Class "GSResult"
 # hides a global script class`, once per class, naming files that are all correct.
-# A dot-prefixed directory being skipped is the editor's behaviour and not a promise;
+# A gs-prefixed directory being skipped is the editor's behaviour and not a promise;
 # this file is the documented way to say it, and it costs nothing.
 printf '' > "$DEPS_DIR/.gdignore"
 
@@ -221,7 +221,7 @@ for addon in "${ADDONS[@]}"; do
     clone="$repo${ref:+@$ref}"
 
     if [ ! -d "$DEPS_DIR/$clone/.git" ]; then
-        # --depth 1: CI wants the files, never the history, and dot-core's history is
+        # --depth 1: CI wants the files, never the history, and gs-core's history is
         # larger than every addon it ships. The token is interpolated into the URL
         # rather than passed as an argument so it is never a separate word anything
         # logs; git itself keeps it out of the error text.

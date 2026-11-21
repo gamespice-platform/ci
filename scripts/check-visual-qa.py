@@ -4,8 +4,8 @@
     scripts/check-visual-qa.py <project-dir>
 
 A game (a `game.sh` at the root next to a `project.godot`) must track `tools/visual_qa.gd`: the
-script dot-game's `dot_game_visual_qa.sh` runs to capture contact sheets and a clip verdict of the
-game's moving things. The harness lives in dot-game; the game's file only lists items and stages
+script gs-game's `gs_game_visual_qa.sh` runs to capture contact sheets and a clip verdict of the
+game's moving things. The harness lives in gs-game; the game's file only lists items and stages
 them. A tracked `tools/visual_qa_shot.sh` must be executable in git (mode 100755), or a box that
 runs it as a command fails with "Permission denied".
 
@@ -27,7 +27,7 @@ def problems(files, modes, allowed=False):
     out = []
     if ENTRY not in files and not allowed:
         out.append(f"{ENTRY} is missing: add a visual QA entry that extends GSGameVisualQaCapture "
-                   "(addons/dot_game/docs/visual-qa.md), or list `*` in ci/visual-qa.allow with the reason")
+                   "(addons/gs_game/docs/visual-qa.md), or list `*` in ci/visual-qa.allow with the reason")
     if SHOT in files and modes.get(SHOT) != "100755":
         out.append(f"{SHOT} is not executable in git: git update-index --chmod=+x {SHOT}")
     return out

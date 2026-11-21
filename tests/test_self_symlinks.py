@@ -25,7 +25,7 @@ class SelfSymlinks(unittest.TestCase):
 
     def test_relative_link_passes(self):
         with tempfile.TemporaryDirectory() as d:
-            self.repo(d, "addons/x", "../../dot-x/addons/x")
+            self.repo(d, "addons/x", "../../gs-x/addons/x")
             self.assertEqual(run(d).returncode, 0)
 
 

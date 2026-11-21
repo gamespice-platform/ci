@@ -35,7 +35,7 @@ WANT="$(grep -oE '^SHA512_linux_x86_64=[0-9a-f]+$' "$PIN" | head -1 | cut -d= -f
 [ -n "$GODOT_VERSION" ] || { printf 'godot.pin declares no GODOT_VERSION\n' >&2; exit 2; }
 [ -n "$WANT" ]          || { printf 'godot.pin declares no SHA512_linux_x86_64\n' >&2; exit 2; }
 
-DEST="${RUNNER_TOOL_CACHE:-$HOME/.cache}/dot-godot/$GODOT_VERSION"
+DEST="${RUNNER_TOOL_CACHE:-$HOME/.cache}/gs-godot/$GODOT_VERSION"
 while [ $# -gt 0 ]; do
     case "$1" in
         --dest)    DEST="${2:?--dest needs a directory}"; shift 2 ;;

@@ -8,7 +8,7 @@
 # WHY THIS REPOSITORY IS PUBLIC. A reusable workflow in a private repository can only
 # be called by repositories owned by the same account. The addons are the
 # organisation's and the games are their author's -- two owners, which is a rule here
-# and not an accident -- so a private dot-ci could be called by the addons and not by
+# and not an accident -- so a private gs-ci could be called by the addons and not by
 # the games, which is the half of the family that most needs a check before a release.
 # Nothing in this repository is secret: it is YAML and shell, and every credential it
 # uses arrives as a secret from the caller.
@@ -55,7 +55,7 @@ on:
                 default: false
             profiles:
                 description: >
-                    Check every cfg/ profile yml against its schema (dot-core's
+                    Check every cfg/ profile yml against its schema (gs-core's
                     tools/profile_check.gd, after the import). Off by default; fails the
                     build on an unknown key, wrong type, out-of-range value, bad extends
                     or duplicate id.
@@ -110,7 +110,7 @@ jobs:
               with:
                   repository: gamespice-platform/ci
                   ref: ${{ github.job_workflow_sha }}
-                  path: dot-ci
+                  path: gs-ci
 
             # Godot needs these even with --headless: the binary links them at load
             # and fails with "libfontconfig.so.1: cannot open shared object file"
@@ -129,7 +129,7 @@ jobs:
             - name: Read the pinned runtime version
               if: inputs.godot
               id: pin
-              run: echo "version=$(dot-ci/scripts/fetch-godot.sh --version)" >> "$GITHUB_OUTPUT"
+              run: echo "version=$(gs-ci/scripts/fetch-godot.sh --version)" >> "$GITHUB_OUTPUT"
 
             - name: Restore the runtime
               if: inputs.godot
@@ -144,7 +144,7 @@ jobs:
             - name: Fetch and verify the runtime
               if: inputs.godot
               run: |
-                  GODOT="$(dot-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/${{ steps.pin.outputs.version }})"
+                  GODOT="$(gs-ci/scripts/fetch-godot.sh --dest ~/.godot-ci/${{ steps.pin.outputs.version }})"
                   echo "GODOT=$GODOT" >> "$GITHUB_ENV"
                   "$GODOT" --version
 
@@ -155,38 +155,38 @@ jobs:
               if: inputs.godot
               env:
                   DEPS_TOKEN: ${{ secrets.DEPS_TOKEN }}
-              run: dot-ci/scripts/resolve-deps.sh project
+              run: gs-ci/scripts/resolve-deps.sh project
 
             # Before the suites: an export without a cfg filter ships without the
             # addons' cfg/addons/*.yml, and nothing at runtime says so.
             - name: Export presets keep cfg/addons
-              run: dot-ci/scripts/check-export-filter.sh project
+              run: gs-ci/scripts/check-export-filter.sh project
 
             # A literal * or ? in a cfg file name cannot exist on Windows or in a pack.
             - name: No * or ? in cfg file names
-              run: dot-ci/scripts/check-cfg-names.sh project
+              run: gs-ci/scripts/check-cfg-names.sh project
 
             # A tracked name Windows cannot check out fails bootstrap.ps1's pull there.
             - name: Tracked names check out on Windows
-              run: python3 dot-ci/scripts/check-windows-names.py project
+              run: python3 gs-ci/scripts/check-windows-names.py project
 
             # A file split into numbered parts (x_part1.gd, x_part2.gd) or named misc: split by
             # responsibility and name each piece for what it holds. Escape: ci/split-names.allow.
             - name: No numbered or meaningless file names
-              run: python3 dot-ci/scripts/check-split-names.py project
+              run: python3 gs-ci/scripts/check-split-names.py project
 
             # A tracked symlink to itself (or an absolute path) loops hv pre-flight and gpu.sh copies.
             - name: No self-referential or absolute symlinks
-              run: python3 dot-ci/scripts/check-self-symlinks.py project
+              run: python3 gs-ci/scripts/check-self-symlinks.py project
 
-            # Every game ships a visual QA entry (dot-game's harness): contact sheets and a clip
+            # Every game ships a visual QA entry (gs-game's harness): contact sheets and a clip
             # verdict for what moves. Escape: `*` in ci/visual-qa.allow, with a reason.
             - name: Game has a visual QA entry
-              run: python3 dot-ci/scripts/check-visual-qa.py project
+              run: python3 gs-ci/scripts/check-visual-qa.py project
 
             # The web origin's CSP has no 'unsafe-eval': JavaScriptBridge.eval throws EvalError there.
             - name: No JavaScript string evaluation
-              run: python3 dot-ci/scripts/check-no-js-eval.py project
+              run: python3 gs-ci/scripts/check-no-js-eval.py project
 
             # The Valve-origin guard is the one publish_pack runs. It is read at a pinned
             # commit, not a branch, for the same reason job_workflow_sha is used. CI has no
@@ -198,20 +198,20 @@ jobs:
                   repository: gamespice-platform/cloud
                   ref: a3a00c6eff41d1153c2cb79bf35468588891ac0f
                   token: ${{ secrets.DEPS_TOKEN || github.token }}
-                  path: dot-cloud
+                  path: gs-cloud
 
             - name: No Valve-origin files in the tracked tree
-              run: python3 -I dot-cloud/tools/check_valve_files.py --git project
+              run: python3 -I gs-cloud/tools/check_valve_files.py --git project
 
             # A requires.floor.json lower than a newer addon class the code names unguarded.
             - name: Floors cover the addon levels the code uses
-              run: python3 dot-ci/scripts/check-floor-uses.py project
+              run: python3 gs-ci/scripts/check-floor-uses.py project
 
             - name: Efficiency gates (baselines only shrink)
               if: inputs.efficiency
               run: |
                   for g in size frame-hazards duplication; do
-                      python3 dot-ci/scripts/check-$g.py project || exit 1
+                      python3 gs-ci/scripts/check-$g.py project || exit 1
                   done
 
             - name: Hygiene gates (comments, generated files, web size, logging, markdown wrap, suite checks)
@@ -220,7 +220,7 @@ jobs:
               run: |
                   rc=0
                   for g in comments generated web-size logging markdown-wrap suite-checks; do
-                      python3 dot-ci/scripts/check-$g.py project || rc=1
+                      python3 gs-ci/scripts/check-$g.py project || rc=1
                   done
                   exit $rc
 
@@ -229,15 +229,15 @@ jobs:
               env:
                   SUITES: ${{ inputs.suites }}
                   SUITE_TIMEOUT: ${{ inputs.suite-timeout }}
-              run: dot-ci/scripts/check.sh project
+              run: gs-ci/scripts/check.sh project
 
             - name: Profile yml against its schemas
               if: inputs.godot && inputs.profiles
-              run: GODOT="$GODOT" dot-ci/scripts/check-profiles.sh project
+              run: GODOT="$GODOT" gs-ci/scripts/check-profiles.sh project
 
             - name: Perf smoke (load time, frame time, nodes, memory vs budget)
               if: inputs.godot && inputs.perf
-              run: GODOT="$GODOT" dot-ci/scripts/perf-smoke.sh project
+              run: GODOT="$GODOT" gs-ci/scripts/perf-smoke.sh project
 
             # Through the environment rather than interpolated into the run block.
             # The value comes from the caller's own workflow file, so this is not a

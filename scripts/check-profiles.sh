@@ -12,7 +12,7 @@ dir="${1:-.}"
 shift || true
 GODOT="${GODOT:-godot}"
 [ -d "$dir" ] || { printf 'no such directory: %s\n' "$dir" >&2; exit 2; }
-tool=addons/dot_profile/tools/profile_check.gd
+tool=addons/gs_profile/tools/profile_check.gd
 if [ ! -d "$dir/cfg" ] || [ ! -f "$dir/$tool" ]; then
     printf 'profiles: nothing to check in %s\n' "$dir"
     exit 0

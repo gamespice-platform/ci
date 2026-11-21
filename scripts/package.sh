@@ -41,7 +41,7 @@
 #   --host-lock FILE (or HOST_LOCK=FILE) names the addons.lock of the shell the pack will
 #   run on. Its pinned addon levels (read by the project's GameSpice Core, GSAddonApi
 #   pinned_levels, from the repositories in GS_REPOS_ROOT, <project>/.deps, beside the
-#   project, TMC_REPOS_DIR, ~/godot) go to dot_requires.gd as --pin, so a
+#   project, TMC_REPOS_DIR, ~/godot) go to gs_requires.gd as --pin, so a
 #   requires.floor.json floor above what that shell ships fails the pack instead of being
 #   judged against the linked head. A lock that reads to no level fails. Without it,
 #   nothing changes.
@@ -49,7 +49,7 @@
 # WHAT IS IN THE ARTIFACT IS WHAT GIT TRACKS, via git archive. Not `cp -r`, and the
 # difference is the point: addons/ is a directory of gitignored SYMLINKS into sibling
 # checkouts on a developer box and into .deps/ on a runner, and a copy would either
-# follow them -- shipping a second, stale copy of every dot-* addon at the same res://
+# follow them -- shipping a second, stale copy of every gs-* addon at the same res://
 # paths the host already defines -- or preserve them, shipping links that dangle the
 # moment the tree moves. git archive resolves it by never seeing them: an ignored file
 # is not tracked, so it is not in the archive, and the list maintains itself.
@@ -77,7 +77,7 @@ HOST_LOCK="${HOST_LOCK:-}"
 # game's text lives in docs/. GSCloudPublisher drops *.md and the content/<id>/pack.json
 # files list docs/ for the same reason.
 EXCLUDE_DIRS=(addons examples tools screenshots images docs .github)
-# Top-level only; GSCloudPublisher.exclude_roots (addons/dot_cloud/publish) is this list.
+# Top-level only; GSCloudPublisher.exclude_roots (addons/gs_cloud/publish) is this list.
 EXCLUDE_ROOTS=(examples tests tools docs ci .github screenshots reports art-src)
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -285,17 +285,17 @@ if [ "$PACK" -eq 1 ]; then
     # keeps the list. A game that commits its own keeps control of it, and it is
     # audited here instead: an addon used and not declared, or declared above what
     # this build has, fails the release rather than a player's join.
-    REQ_TOOL="res://addons/dot_core/tools/dot_requires.gd"
+    REQ_TOOL="res://addons/gs_core/tools/gs_requires.gd"
     REQ_PINS=()
     if [ -n "$HOST_LOCK" ]; then
         # The shell's levels, so a floor is judged against what players run. A GameSpice Core
         # that cannot take them would ignore --pin and judge against the linked head:
         # failed, not passed, since the caller asked for the check.
-        grep -q '"--pin"' "$PROJECT/addons/dot_core/tools/dot_requires.gd" 2>/dev/null \
-            && grep -q 'func pinned_levels' "$PROJECT/addons/dot_core/core/dot_addon_api.gd" 2>/dev/null \
-            || { printf 'the linked dot-core cannot judge floors against a lock (no --pin / pinned_levels); --host-lock needs a newer one\n' >&2; exit 1; }
+        grep -q '"--pin"' "$PROJECT/addons/gs_core/tools/gs_requires.gd" 2>/dev/null \
+            && grep -q 'func pinned_levels' "$PROJECT/addons/gs_core/core/gs_addon_api.gd" 2>/dev/null \
+            || { printf 'the linked gs-core cannot judge floors against a lock (no --pin / pinned_levels); --host-lock needs a newer one\n' >&2; exit 1; }
         pins_out="$("${GODOT:-godot}" --headless --path "$PROJECT" --script "$HERE/lock_pins.gd" -- "$HOST_LOCK" \
-            "${GS_REPOS_ROOT:-${DOT_REPOS_ROOT:-}}" "$PROJECT/.deps" "$(dirname "$PROJECT")" "${TMC_REPOS_DIR:-}" "$HOME/godot")" \
+            "${GS_REPOS_ROOT:-}" "$PROJECT/.deps" "$(dirname "$PROJECT")" "${TMC_REPOS_DIR:-}" "$HOME/godot")" \
             || { printf 'could not read the addon levels %s pins\n' "$HOST_LOCK" >&2; exit 1; }
         while IFS=$'\t' read -r tag pin; do
             [ "$tag" = pin ] && REQ_PINS+=(--pin "$pin")
@@ -304,7 +304,7 @@ if [ "$PACK" -eq 1 ]; then
             || { printf '%s reads to no addon level (are its repositories in GS_REPOS_ROOT?)\n' "$HOST_LOCK" >&2; exit 1; }
         printf 'floors judged against %d addon levels pinned by %s\n' "$(( ${#REQ_PINS[@]} / 2 ))" "$HOST_LOCK" >&2
     fi
-    if [ -f "$PROJECT/addons/dot_core/tools/dot_requires.gd" ]; then
+    if [ -f "$PROJECT/addons/gs_core/tools/gs_requires.gd" ]; then
         if [ -f "$PACK_DIR/requires.json" ]; then
             "${GODOT:-godot}" --headless --path "$PROJECT" --script "$REQ_TOOL" -- --check requires.json >&2 \
                 || { printf '%s/requires.json does not cover what the game uses\n' "$NAME" >&2; exit 1; }
@@ -317,7 +317,7 @@ if [ "$PACK" -eq 1 ]; then
     else
         # A GameSpice Core pinned from before the tool existed. Said, not failed: the pack is
         # exactly what it was the day before, and a host checks nothing it is not given.
-        printf 'note: dot-core has no dot_requires.gd; %s ships without requires.json\n' "$NAME" >&2
+        printf 'note: gs-core has no gs_requires.gd; %s ships without requires.json\n' "$NAME" >&2
     fi
 
     pack_path="$OUT/${NAME}-${VERSION}-pack.zip"

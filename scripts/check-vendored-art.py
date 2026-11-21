@@ -4,9 +4,9 @@
     check-vendored-art.py [--addon DIR] [--games-root DIR] [--ref REF] [--game NAME ...]
 
 A game cannot load art that lives outside its own tree, so it vendors a copy of the
-files the addon's art table names (zee-dot-weapons/tools/sync-art.sh). Nothing re-copies
+files the addon's art table names (zee-gs-weapons/tools/sync-art.sh). Nothing re-copies
 when the addon adds or changes a model, so the game goes red in CI later. 2026-11-20:
-zee-dot-weapons a5b7b0e added frag.glb and sticky.glb and five games were stale.
+zee-gs-weapons a5b7b0e added frag.glb and sticky.glb and five games were stale.
 
 This is the fast, Godot-free form of `sync-art.sh <game> --check`. It reads git objects only:
   * SOURCE: the addon repository's files under assets/ at --ref (default HEAD).

@@ -89,7 +89,7 @@ echo "importing"
 timeout 600 "$GODOT" --headless --path . --import >/dev/null 2>&1
 
 echo "parsing"
-PARSE_TOOL=addons/dot_core/tools/dot_parse_all.gd
+PARSE_TOOL=addons/gs_core/tools/gs_parse_all.gd
 if [ -f "$PARSE_TOOL" ] && [ -z "${PARSE_PER_FILE:-}" ]; then
     # ONE process for every script, when the project's GameSpice Core has the tool: about ten
     # times faster than a start-up per file (66 scripts: 40 s against 4 s) and the same
