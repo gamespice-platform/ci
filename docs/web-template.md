@@ -27,8 +27,8 @@ games do not use) is the next lever and is not measured yet.
 ## Boot test
 
 The custom engine was dropped into the stamped shell build (index.js, index.wasm, index.side.wasm from the
-custom zip; fileSizes updated) and run with  (dot-server-deploy) through
- on staging02, renderer ANGLE NVIDIA GeForce RTX 2070: canvas 156 / 218 / 214 ms, index.side.wasm
+custom zip; fileSizes updated) and run with tools/web_load_timing.mjs --runs 3 (dot-server-deploy) through
+gpu.sh cdp-run on staging02, renderer ANGLE NVIDIA GeForce RTX 2070: canvas 156 / 218 / 214 ms, index.side.wasm
 (40,390,643 B) and dot_sim.wasm both load, 0 console errors in runs 2 and 3; run 1 had one 404 that is not a shell
 file (browser favicon request, first load only). Not done: the official-template run on the same box for
 the same session, the fc/playlot web smoke, the fb text-server variant, and a debug template.
