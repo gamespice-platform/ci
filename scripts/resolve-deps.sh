@@ -68,12 +68,12 @@ DEPS_DIR="$PROJECT/.deps"
 ## without colliding with it, and its repository is named for what it IS rather than for
 ## its prefix (zee-gs-weapons, zed-gs-weapons). Same exception setup.sh's addon_repo()
 ## carries. fc-weapons (Fatal Contact's weapons) holds addons/fc_weapons; its tags up to
-## v1.4.51 hold the legacy addons/arena_weapons, which still maps here (see legacy_dir).
+## v1.4.51 hold the legacy addons/fc_weapons, which still maps here (see legacy_dir).
 addon_repo() {
     case "$1" in
         zee_weapons) printf 'zee-gs-weapons\n' ;;
         zed_weapons) printf 'zed-gs-weapons\n' ;;
-        fc_weapons|arena_weapons) printf 'fc-weapons\n' ;;
+        fc_weapons|fc_weapons) printf 'fc-weapons\n' ;;
         *)           printf '%s\n' "${1//_/-}" ;;
     esac
 }
@@ -82,14 +82,14 @@ addon_repo() {
 ## at actually holds that directory, and every use prints a WRN naming the ref.
 legacy_dir() {
     case "$1" in
-        fc_weapons) printf 'arena_weapons\n' ;;
+        fc_weapons) printf 'fc_weapons\n' ;;
     esac
 }
 
 ## The current directory for a legacy one, or nothing.
 current_dir() {
     case "$1" in
-        arena_weapons) printf 'fc_weapons\n' ;;
+        fc_weapons) printf 'fc_weapons\n' ;;
     esac
 }
 
@@ -137,7 +137,7 @@ if [ -f "$LOCK" ]; then
         case "$repo" in
             zee-gs-weapons) addon=zee_weapons ;;
             zed-gs-weapons) addon=zed_weapons ;;
-            fc-weapons)      addon=fc_weapons ;;  # refs up to v1.4.51 hold the legacy arena_weapons: decided after the clone
+            fc-weapons)      addon=fc_weapons ;;  # refs up to v1.4.51 hold the legacy fc_weapons: decided after the clone
             *)               addon="${repo//-/_}" ;;
         esac
         ADDONS+=("$addon")
@@ -242,7 +242,7 @@ for addon in "${ADDONS[@]}"; do
     fi
 
     # A renamed addon is linked under the directory its ref HOLDS, because its own res://
-    # paths name that directory. fc-weapons tags up to v1.4.51 hold addons/arena_weapons,
+    # paths name that directory. fc-weapons tags up to v1.4.51 hold addons/fc_weapons,
     # later ones addons/fc_weapons. Never an alias: a game naming one directory and a ref
     # holding the other is a FAIL (the game or the pin has to move), and the legacy name
     # is always reported.
