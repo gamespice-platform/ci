@@ -46,7 +46,7 @@ This is not a Godot project. It has no `project.godot`, no `addons/`, and nothin
 
 ## Running and testing
 
-There is no way to test a reusable workflow except by calling it. Tag this repository (`v1` moves; `v1.2.3` does not), point one caller at the new tag, watch it, then move `v1`. Callers pin `@v1` (or an exact tag) on purpose: a floating `@main` across sixty repositories means a typo here is sixty red repositories at once.
+There is no way to test a reusable workflow except by calling it. Tag this repository (`v1` moves; `v1.2.3` does not), point one caller at the new tag, watch it, then move `v1`. The `v1` tag is stale and must not be used (it clones the old zees-games/gs-* repos); callers pin an exact immutable tag, currently `@v1.4.0`. Callers pin a tag on purpose: a floating `@main` across sixty repositories means a typo here is sixty red repositories at once.
 
 The scripts run on a laptop and should be exercised there first; they take a directory ([README](README.md#running-the-scripts-yourself) has the full list):
 
