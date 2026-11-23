@@ -150,14 +150,14 @@ for line in lock_text.splitlines():
 
 
 # A renamed addon directory: current -> legacy. fc-weapons (Fatal Contact's weapons) holds
-# addons/fc_weapons; its tags up to v1.4.51 hold the legacy addons/fc_weapons. Which one a
+# addons/fc_weapons; its tags up to v1.4.51 hold the legacy addons/arena_weapons. Which one a
 # server has is decided by what its locked ref holds, never assumed.
-LEGACY_DIRS = {"fc_weapons": "fc_weapons"}
+LEGACY_DIRS = {"fc_weapons": "arena_weapons"}
 CURRENT_DIRS = {old: new for new, old in LEGACY_DIRS.items()}
 
 
 def repo_of(addon):
-    if addon in ("fc_weapons", "fc_weapons"):
+    if addon in ("fc_weapons", "arena_weapons"):
         return "fc-weapons"
     if addon in ("zee_weapons", "zed_weapons"):
         return addon.replace("_weapons", "-gs-weapons")
