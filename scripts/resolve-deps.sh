@@ -45,7 +45,7 @@
 #
 #   DEPS_TOKEN   a token that can read the private addon repositories
 #   GIT_HOST     default github.com
-#   GS_OWNER    default gamespice-platform (the addons; their repositories drop the dot- prefix)
+#   GS_OWNER    default gamespice-platform (the addons; their repositories drop the gs- prefix)
 #   GAME_OWNER   default zees-games     (the games, and the weapons packs)
 #
 set -uo pipefail

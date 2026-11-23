@@ -33,7 +33,7 @@
 # Environment:
 #   SERVER_REPO   default gamespice-platform/server-deploy
 #   DEPS_TOKEN    optional; read access for private repositories (never printed)
-#   GS_OWNER     default gamespice-platform (the addons; repositories drop the dot- prefix)
+#   GS_OWNER     default gamespice-platform (the addons; repositories drop the gs- prefix)
 #   GAME_OWNER    default zees-games     (zee-gs-weapons and zed-gs-weapons, the addons that are not)
 set -uo pipefail
 
