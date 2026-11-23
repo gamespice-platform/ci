@@ -64,15 +64,14 @@ DEPS_DIR="$PROJECT/.deps"
 ## The repository an addon directory lives in.
 ##
 ## gs_user_avatar -> GameSpice User Avatar, true for every link in the family except the
-## weapons packs: each took a prefix (`zee_`, `zed_`) so it could sit on top of the family
+## weapons packs: it took a prefix (`zee_`) so it could sit on top of the family
 ## without colliding with it, and its repository is named for what it IS rather than for
-## its prefix (zee-gs-weapons, zed-gs-weapons). Same exception setup.sh's addon_repo()
+## its prefix (zee-gs-weapons). Same exception setup.sh's addon_repo()
 ## carries. fc-weapons (Fatal Contact's weapons) holds addons/fc_weapons; its tags up to
 ## v1.4.51 hold the legacy addons/arena_weapons, which still maps here (see legacy_dir).
 addon_repo() {
     case "$1" in
         zee_weapons) printf 'zee-gs-weapons\n' ;;
-        zed_weapons) printf 'zed-gs-weapons\n' ;;
         fc_weapons|arena_weapons) printf 'fc-weapons\n' ;;
         *)           printf '%s\n' "${1//_/-}" ;;
     esac
@@ -136,7 +135,6 @@ if [ -f "$LOCK" ]; then
         case "$repo" in \#*) continue ;; esac
         case "$repo" in
             zee-gs-weapons) addon=zee_weapons ;;
-            zed-gs-weapons) addon=zed_weapons ;;
             fc-weapons)      addon=fc_weapons ;;  # refs up to v1.4.51 hold the legacy arena_weapons: decided after the clone
             *)               addon="${repo//-/_}" ;;
         esac

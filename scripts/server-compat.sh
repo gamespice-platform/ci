@@ -34,7 +34,7 @@
 #   SERVER_REPO   default gamespice-platform/server-deploy
 #   DEPS_TOKEN    optional; read access for private repositories (never printed)
 #   GS_OWNER     default gamespice-platform (the addons; repositories drop the gs- prefix)
-#   GAME_OWNER    default zees-games     (zee-gs-weapons and zed-gs-weapons, the addons that are not)
+#   GAME_OWNER    default zees-games     (zee-gs-weapons, the addon that is not)
 set -uo pipefail
 
 INPUT="${1:-}"
@@ -159,7 +159,7 @@ CURRENT_DIRS = {old: new for new, old in LEGACY_DIRS.items()}
 def repo_of(addon):
     if addon in ("fc_weapons", "arena_weapons"):
         return "fc-weapons"
-    if addon in ("zee_weapons", "zed_weapons"):
+    if addon in ("zee_weapons",):
         return addon.replace("_weapons", "-gs-weapons")
     return addon.replace("_", "-")
 
