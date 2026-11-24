@@ -130,6 +130,8 @@ scripts/package.sh ../gs-cloud 0.2.0 --out /tmp/out
 scripts/ci-local.sh ../game-x                  # HEAD of a checkout, checked as CI will (fresh addons from main, ci.yml's timeout and suites)
 ```
 
+Before `git tag` on a game, run `GODOT=godot scripts/pre-tag.sh ../game-x`. It reads `pack*`, `host-lock` and `server-compat` from the game's `release.yml`, builds the pack the tag would build and runs both release gates strictly: `check-pack-static.py` (with `pack-deny`) and `server-compat.sh`. Nonzero means the release would be red. The same build runs on every push in `validate.yml` when the caller passes `pack: true` and the same `pack-*` inputs as its release job (`scripts/pack-gates.sh`): the static gate fails the build, server-compat only emits a `::warning::` and a summary line, because an addon that is not yet tagged is a normal state on main. `release.yml` is unchanged and stays the final authority.
+
 Run `ci-local.sh` before pushing: `game.sh test` runs against the sibling working trees `addons/` links to, which can be older or newer than the addon tips CI clones, so a green local run says nothing about an addon that moved since.
 
 Before pushing new art from an addon that games vendor (zee-gs-weapons), run `python3 ../gs-ci/scripts/check-vendored-art.py` in it. It reads git objects only, takes about a second, and lists every game under `~/godot` whose vendored copy is stale or missing a weapon model the art table names, with the `tools/sync-art.sh <game>` command that fixes it. The same check runs in the system pre-push hook when the addon's main is pushed (it lists the games and lets the push through; `OWNER_HOOK_VENDORED_ART=strict` refuses, `off` skips) and in `efficiency-nightly.sh`.

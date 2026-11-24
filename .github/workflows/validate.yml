@@ -68,6 +68,36 @@ on:
                     once it has recorded one with perf-smoke.sh --init.
                 type: boolean
                 default: false
+            pack:
+                description: >-
+                    The caller's release.yml sets `pack: true`: also build the pack that release
+                    would and run its two gates on every push (scripts/pack-gates.sh), so a red
+                    release shows here and not an hour after the tag. The static gate
+                    (scripts/check-pack-static.py, with pack-deny) fails the build; server-compat
+                    only warns, because an addon not yet tagged is a normal state on main. Give
+                    it the same pack-* inputs release.yml gets.
+                type: boolean
+                default: false
+            pack-deny:
+                description: release.yml's input of the same name.
+                type: string
+                default: ''
+            pack-exclude-dirs:
+                description: release.yml's input of the same name.
+                type: string
+                default: ''
+            pack-owned-addons:
+                description: release.yml's input of the same name.
+                type: boolean
+                default: false
+            host-lock:
+                description: release.yml's input of the same name.
+                type: string
+                default: ''
+            server-compat:
+                description: release.yml's input of the same name (false skips the advisory check too).
+                type: boolean
+                default: true
             shell-command:
                 description: A command to run instead of, or as well as, the Godot check.
                 type: string
@@ -230,6 +260,28 @@ jobs:
                   SUITES: ${{ inputs.suites }}
                   SUITE_TIMEOUT: ${{ inputs.suite-timeout }}
               run: gs-ci/scripts/check.sh project
+
+            # Release's two artifact gates, run before the tag instead of after it. The static
+            # gate fails here exactly as it fails the release; server-compat is advisory (a
+            # ::warning:: and a summary line) because main may need an addon tag that does not
+            # exist yet. scripts/pre-tag.sh runs both strictly. The project is imported by now.
+            - name: The pack release would build passes its gates
+              if: inputs.godot && inputs.pack
+              env:
+                  DEPS_TOKEN: ${{ secrets.DEPS_TOKEN }}
+                  PACK_DENY: ${{ inputs.pack-deny }}
+                  PACK_EXCLUDE_DIRS: ${{ inputs.pack-exclude-dirs }}
+                  PACK_OWNED: ${{ inputs.pack-owned-addons }}
+                  HOST_LOCK_IN: ${{ inputs.host-lock }}
+                  COMPAT: ${{ inputs.server-compat }}
+              run: |
+                  args=(--no-import --compat advisory)
+                  [ "$COMPAT" = "false" ] && args=(--no-import --compat off)
+                  [ -n "$PACK_DENY" ] && args+=(--deny "$PACK_DENY")
+                  [ -n "$PACK_EXCLUDE_DIRS" ] && args+=(--exclude-dirs "$PACK_EXCLUDE_DIRS")
+                  [ "$PACK_OWNED" = "true" ] && args+=(--owned-addons)
+                  [ -n "$HOST_LOCK_IN" ] && args+=(--host-lock "$HOST_LOCK_IN")
+                  gs-ci/scripts/pack-gates.sh project "${args[@]}"
 
             - name: Profile yml against its schemas
               if: inputs.godot && inputs.profiles

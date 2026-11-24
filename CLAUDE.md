@@ -43,6 +43,7 @@ This is not a Godot project. It has no `project.godot`, no `addons/`, and nothin
 | `scripts/affected.sh [REPO] [--since REV] [--cmds\|--json]` | which sibling repositories link the changed repository and which of their suites (reached by class name or file name through three hops) to run; `parse` when none names the change. Tests in `tests/test_affected.py` |
 | `scripts/package.sh` | the release artifact; `--pack` builds the pack zip and `requires.json`; `--host-lock FILE` passes that lock's addon levels (`lock_pins.gd`) to `gs_requires.gd` as `--pin`. Tests in `tests/test_package_lock_pins.py` |
 | `scripts/package-subpacks.sh` | one pack per map directory |
+| `scripts/pack-gates.sh <dir>`, `pre-tag.sh <game-dir>` | build the pack `release.yml` would and run `check-pack-static.py` plus `server-compat.sh`: `validate.yml` (input `pack: true`) runs it with server-compat advisory, `pre-tag.sh` strict from the game's `release.yml` inputs. Tests in `tests/test_pack_gates.py` |
 | `scripts/server-compat.sh` | refuses a pack the newest released server cannot run |
 
 ## Running and testing
