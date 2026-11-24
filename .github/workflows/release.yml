@@ -76,6 +76,13 @@ on:
                     changes nothing.
                 type: string
                 default: ''
+            pack-deny:
+                description: >-
+                    With `pack`, a Python regex no text file in the pack may match,
+                    for example a dev-only origin or panel address. Empty checks only the
+                    structural rules of scripts/check-pack-static.py.
+                type: string
+                default: ''
         secrets:
             DEPS_TOKEN:
                 description: Reads the private addons the project declares. Only `pack` needs it.
@@ -194,6 +201,18 @@ jobs:
             # and then found wanting has already reached every server that restarts. On
             # 2026-10-04 a game needing an addon API that existed only as untagged commits
             # was released, published, and refused by a live server at boot.
+            # The artifact gate on the pack as built: a pre-rename addon or Dot* class, one
+            # uid owned by two resources (the 2026-11-23 outage: a server would not boot),
+            # and the caller's `pack-deny` pattern. Refuses before the release exists.
+            - name: The pack passes the static artifact gate
+              if: inputs.pack
+              env:
+                  DENY: ${{ inputs.pack-deny }}
+              run: |
+                  set -euo pipefail
+                  args=()
+                  [ -n "$DENY" ] && args+=(--deny "$DENY")
+                  python3 gs-ci/scripts/check-pack-static.py "${args[@]}" "$RUNNER_TEMP"/dist/*-pack.zip
             - name: A released server can run this pack
               if: inputs.pack && inputs.server-compat
               env:
