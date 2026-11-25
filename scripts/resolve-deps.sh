@@ -47,9 +47,11 @@
 #   GIT_HOST     default github.com
 #   GS_OWNER    default gamespice-platform (the addons; their repositories drop the gs- prefix)
 #   GAME_OWNER   default zees-games     (the games, and the weapons packs)
+#   GS_CLOUD     a gs-cloud checkout (its tools/lock_verify.sh restores an addon's source.lock.json files)
 #
 set -uo pipefail
 
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT="${1:-.}"
 MODE="${2:-clone}"
 
@@ -234,6 +236,16 @@ for addon in "${ADDONS[@]}"; do
             printf '  FAIL  could not clone %s/%s%s (for addons/%s)\n        %s\n' \
                 "$owner" "$repo" "${ref:+ at $ref}" "$addon" \
                 "$(printf '%s' "$err" | _redact | tr '\n' ' ')" >&2
+            fails=$((fails + 1))
+            continue
+        fi
+    fi
+
+    # An addon that does not track its binaries (source.lock.json) is restored from the CDN, by
+    # hash, into its clone before it is linked. Present files with the right hash are skipped.
+    if [ -f "$DEPS_DIR/$clone/source.lock.json" ]; then
+        if ! "$SELF/fetch-source-lock.sh" "$DEPS_DIR/$clone" "${GS_CLOUD:-$PROJECT/../gs-cloud}" >&2; then
+            printf '  FAIL  could not restore the untracked files of %s (source.lock.json)\n' "$clone" >&2
             fails=$((fails + 1))
             continue
         fi

@@ -16,7 +16,7 @@ class ValveGuardStep(unittest.TestCase):
         return m.group(1)
 
     def test_checkout_is_pinned_to_a_full_commit(self):
-        body = self._step("Check out the Valve-origin guard")
+        body = self._step("Check out gs-cloud (Valve-origin guard, source-lock fetcher)")
         self.assertIn("repository: gamespice-platform/cloud", body)
         m = re.search(r"ref: ([0-9a-f]+)\n", body)
         self.assertIsNotNone(m, "ref is not a literal commit")
@@ -28,7 +28,7 @@ class ValveGuardStep(unittest.TestCase):
         self.assertNotIn("if:", body)
 
     def test_guard_runs_after_checkout(self):
-        self.assertLess(self.text.index("Check out the Valve-origin guard"),
+        self.assertLess(self.text.index("Check out gs-cloud (Valve-origin guard, source-lock fetcher)"),
                         self.text.index("No Valve-origin files in the tracked tree"))
 
 

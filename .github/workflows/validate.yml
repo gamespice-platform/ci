@@ -178,6 +178,25 @@ jobs:
                   echo "GODOT=$GODOT" >> "$GITHUB_ENV"
                   "$GODOT" --version
 
+            # The Valve-origin guard is the one publish_pack runs. It is read at a pinned
+            # commit, not a branch, for the same reason job_workflow_sha is used. CI has no
+            # stock index (it is built from a local Valve install and never leaves it), so
+            # the name and extension rules run and the log says the content match was skipped.
+            - name: Check out gs-cloud (Valve-origin guard, source-lock fetcher)
+              uses: actions/checkout@v4
+              with:
+                  repository: gamespice-platform/cloud
+                  ref: f62394ff4faf40ad235d54ba65452fbfec67c160
+                  token: ${{ secrets.DEPS_TOKEN || github.token }}
+                  path: gs-cloud
+
+            # A repo that does not track its pack binaries (source.lock.json, gs-cloud
+            # docs/source-lock.md) has none of them in the checkout; the lock restores each by
+            # hash from the CDN, byte-verified, before anything imports. No lock, no step.
+            # resolve-deps.sh does the same for the addon clones, with GS_CLOUD pointing here.
+            - name: Restore the untracked source files from source.lock.json
+              run: gs-ci/scripts/fetch-source-lock.sh project gs-cloud
+
             # Not "if: secrets.DEPS_TOKEN" -- secrets are not available in a job-level
             # if. The script decides: a project that declares no addons exits 0 having
             # done nothing, and one that declares some and has no token fails loudly.
@@ -185,6 +204,7 @@ jobs:
               if: inputs.godot
               env:
                   DEPS_TOKEN: ${{ secrets.DEPS_TOKEN }}
+                  GS_CLOUD: ${{ github.workspace }}/gs-cloud
               run: gs-ci/scripts/resolve-deps.sh project
 
             # Before the suites: an export without a cfg filter ships without the
@@ -217,18 +237,6 @@ jobs:
             # The web origin's CSP has no 'unsafe-eval': JavaScriptBridge.eval throws EvalError there.
             - name: No JavaScript string evaluation
               run: python3 gs-ci/scripts/check-no-js-eval.py project
-
-            # The Valve-origin guard is the one publish_pack runs. It is read at a pinned
-            # commit, not a branch, for the same reason job_workflow_sha is used. CI has no
-            # stock index (it is built from a local Valve install and never leaves it), so
-            # the name and extension rules run and the log says the content match was skipped.
-            - name: Check out the Valve-origin guard
-              uses: actions/checkout@v4
-              with:
-                  repository: gamespice-platform/cloud
-                  ref: a3a00c6eff41d1153c2cb79bf35468588891ac0f
-                  token: ${{ secrets.DEPS_TOKEN || github.token }}
-                  path: gs-cloud
 
             - name: No Valve-origin files in the tracked tree
               run: python3 -I gs-cloud/tools/check_valve_files.py --git project
