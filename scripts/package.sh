@@ -120,6 +120,42 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
+## A repository that does not track its binaries (source.lock.json, gs-cloud
+## docs/source-lock.md) has nothing of them in git, so git archive would ship a pack
+## with every model and texture missing. The lock names each file and its sha256: they
+## are restored into the checkout by hash (fetch-source-lock.sh, idempotent) and then
+## laid over every tree built from git archive. LOCKED lists those paths.
+LOCKED=()
+if [ -f "$PROJECT/source.lock.json" ]; then
+    CLOUD="${GS_CLOUD:-}"
+    if [ -z "$CLOUD" ]; then
+        for c in "$PROJECT/../gs-cloud" "$(dirname "$PROJECT")/gs-cloud"; do
+            [ -f "$c/tools/lock_verify.sh" ] && CLOUD="$c" && break
+        done
+    fi
+    [ -n "$CLOUD" ] || { printf 'FAIL  %s has a source.lock.json and no gs-cloud checkout was found (set GS_CLOUD)\n' "$NAME" >&2; exit 2; }
+    "$HERE/fetch-source-lock.sh" "$PROJECT" "$CLOUD" >&2 \
+        || { printf 'FAIL  could not restore the files %s does not track\n' "$NAME" >&2; exit 1; }
+    mapfile -t LOCKED < <(python3 -I -c '
+import json, sys
+lock = json.load(open(sys.argv[1]))
+for files in lock.get("source_files", {}).values():
+    for path in sorted(files):
+        print(path)' "$PROJECT/source.lock.json") || exit 1
+    [ "${#LOCKED[@]}" -gt 0 ] || { printf 'FAIL  %s/source.lock.json names no files\n' "$NAME" >&2; exit 1; }
+fi
+
+# Lay the restored, untracked files over a tree extracted from git archive. A file git
+# already tracks is left as the archive has it.
+overlay_locked() {
+    local dest="$1" f
+    for f in "${LOCKED[@]}"; do
+        [ -e "$dest/$f" ] && continue
+        [ -f "$PROJECT/$f" ] || { printf 'FAIL  locked file %s is missing after the restore\n' "$f" >&2; return 1; }
+        mkdir -p "$dest/$(dirname "$f")" && cp "$PROJECT/$f" "$dest/$f" || return 1
+    done
+}
+
 ## The addons this repository OWNS, as opposed to the ones it links in to open.
 ##
 ## Ownership is decided by git, not by the filesystem: every linked dependency is
@@ -139,6 +175,7 @@ artifacts=()
 
 if [ "${#OWNED[@]}" -gt 0 ]; then
     git archive --format=tar HEAD | tar -x -C "$STAGE" || exit 1
+    overlay_locked "$STAGE" || exit 1
 
     for addon in "${OWNED[@]}"; do
         [ -d "$STAGE/addons/$addon" ] || continue
@@ -178,7 +215,14 @@ if [ "${#artifacts[@]}" -eq 0 ]; then
     # unpacks it without looking.
     tar_path="$OUT/${NAME}-${VERSION}.tar.gz"
     rm -f "$tar_path"
-    git archive --format=tar.gz --prefix="${NAME}-${VERSION}/" -o "$tar_path" HEAD || exit 1
+    if [ "${#LOCKED[@]}" -gt 0 ]; then
+        mkdir -p "$STAGE/tree/${NAME}-${VERSION}" || exit 1
+        git archive --format=tar HEAD | tar -x -C "$STAGE/tree/${NAME}-${VERSION}" || exit 1
+        overlay_locked "$STAGE/tree/${NAME}-${VERSION}" || exit 1
+        tar -czf "$tar_path" -C "$STAGE/tree" "${NAME}-${VERSION}" || exit 1
+    else
+        git archive --format=tar.gz --prefix="${NAME}-${VERSION}/" -o "$tar_path" HEAD || exit 1
+    fi
     artifacts+=("$tar_path")
     printf 'packed the tracked tree -> %s\n' "$(basename "$tar_path")" >&2
 fi
@@ -199,6 +243,7 @@ if [ "$PACK" -eq 1 ]; then
     PACK_DIR="$STAGE/pack"
     mkdir -p "$PACK_DIR" || exit 1
     git archive --format=tar HEAD | tar -x -C "$PACK_DIR" || exit 1
+    overlay_locked "$PACK_DIR" || exit 1
 
     for d in "${EXCLUDE_DIRS[@]}"; do
         find "$PACK_DIR" -depth -type d -name "$d" -exec rm -rf {} + || exit 1

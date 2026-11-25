@@ -111,6 +111,22 @@ jobs:
                   ref: ${{ github.job_workflow_sha }}
                   path: gs-ci
 
+            # A repo that does not track its pack binaries (source.lock.json, gs-cloud
+            # docs/source-lock.md) has none of them in this checkout: git archive would ship the
+            # pack stripped, and the import below would see no models. The lock restores each by
+            # hash from the CDN, byte-verified, before anything reads the tree. package.sh lays the
+            # restored files over the archive. No lock, no step. Same pinned gs-cloud as validate.yml.
+            - name: Check out gs-cloud (source-lock fetcher)
+              uses: actions/checkout@v4
+              with:
+                  repository: gamespice-platform/cloud
+                  ref: f62394ff4faf40ad235d54ba65452fbfec67c160
+                  token: ${{ secrets.DEPS_TOKEN || github.token }}
+                  path: gs-cloud
+
+            - name: Restore the untracked source files from source.lock.json
+              run: gs-ci/scripts/fetch-source-lock.sh project gs-cloud
+
             - name: Work out the version
               id: v
               env:
@@ -172,6 +188,7 @@ jobs:
 
             - name: Build the artifact
               env:
+                  GS_CLOUD: ${{ github.workspace }}/gs-cloud
                   PACK: ${{ inputs.pack }}
                   PACK_EXCLUDE_DIRS: ${{ inputs.pack-exclude-dirs }}
                   PACK_OWNED: ${{ inputs.pack-owned-addons }}
