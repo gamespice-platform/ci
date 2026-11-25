@@ -12,6 +12,7 @@ HERE = os.path.dirname(__file__)
 FETCH = os.path.join(HERE, "..", "scripts", "fetch-source-lock.sh")
 RESOLVE = os.path.join(HERE, "..", "scripts", "resolve-deps.sh")
 WORKFLOW = os.path.join(HERE, "..", ".github", "workflows", "validate.yml")
+MAPS_WORKFLOW = os.path.join(HERE, "..", ".github", "workflows", "release-maps.yml")
 
 STUB = '#!/bin/bash\n[ "$1" = --lock ] && [ "$3" = --fetch ] || exit 2\nprintf restored > "$4/restored.bin"\n'
 
@@ -100,6 +101,25 @@ class WorkflowStep(unittest.TestCase):
         self.assertFalse(any("if:" in ln for ln in body))
         self.assertIn("fetch-source-lock.sh project gs-cloud", "\n".join(body))
         self.assertIn("GS_CLOUD: ${{ github.workspace }}/gs-cloud", self.text)
+
+
+class MapsWorkflowStep(unittest.TestCase):
+    """release-maps.yml packs maps out of the maps checkout: a map repository without its payload in git
+    (source.lock.json) needs the files back before they are linked in and imported."""
+
+    def setUp(self):
+        self.text = open(MAPS_WORKFLOW).read()
+
+    def test_the_maps_checkout_is_restored_before_it_is_linked_and_imported(self):
+        t = self.text
+        self.assertLess(t.index("Check out gs-cloud"), t.index("Restore the untracked source files"))
+        self.assertLess(t.index("Restore the untracked source files"), t.index("Link the maps in"))
+        self.assertLess(t.index("Link the maps in"), t.index("Import the game, maps and all"))
+
+    def test_it_restores_the_maps_repo_not_the_game(self):
+        i = self.text.index("- name: Restore the untracked source files")
+        self.assertIn("fetch-source-lock.sh maps-repo gs-cloud", self.text[i:i + 200])
+        self.assertNotIn("if:", self.text[i:i + 200])
 
 
 if __name__ == "__main__":

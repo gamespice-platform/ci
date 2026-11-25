@@ -66,6 +66,20 @@ jobs:
                   repository: gamespice-platform/ci
                   ref: ${{ github.job_workflow_sha }}
                   path: gs-ci
+            # A map repository that does not track its payload (source.lock.json, gs-cloud
+            # docs/source-lock.md) has no .bin or textures in maps-repo/: the pack would be built from
+            # nothing. The lock restores each file by hash from the CDN, byte-verified, before the maps
+            # are linked in. resolve-deps.sh below finds this checkout beside `project` for the
+            # addon clones' locks. No lock, no step.
+            - name: Check out gs-cloud (source-lock fetcher)
+              uses: actions/checkout@v4
+              with:
+                  repository: gamespice-platform/cloud
+                  ref: f62394ff4faf40ad235d54ba65452fbfec67c160
+                  token: ${{ secrets.DEPS_TOKEN || github.token }}
+                  path: gs-cloud
+            - name: Restore the untracked source files from source.lock.json
+              run: gs-ci/scripts/fetch-source-lock.sh maps-repo gs-cloud
             - name: Work out the version
               id: v
               env:
