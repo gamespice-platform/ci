@@ -238,6 +238,11 @@ jobs:
             - name: No JavaScript string evaluation
               run: python3 gs-ci/scripts/check-no-js-eval.py project
 
+            # load("uid://...") fails with "Unrecognized UID" on a box or pack without the uid cache,
+            # and the game runs on without what it loads. Escape: a `uid-load: allow <reason>` comment.
+            - name: Scripts load by path, not uid://
+              run: python3 gs-ci/scripts/check-no-uid-loads.py project
+
             - name: No Valve-origin files in the tracked tree
               run: python3 -I gs-cloud/tools/check_valve_files.py --git project
 
