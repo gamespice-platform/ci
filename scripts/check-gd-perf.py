@@ -29,11 +29,23 @@ Kinds, counted per function (key `path::func::kind`, count = sites, as check-fra
     emit_in_loop     a signal .emit( inside a for/while body (batch it)
     empty_process    a _process/_physics_process whose body is only `pass`
 
+Addons. A game's addons/ entries are links (sibling working trees locally, .deps/ clones in
+CI), never tracked, so the tracked scan cannot see them. Two hot-file lines reach them:
+
+  addons: linked   lint every linked addon repository (link target <repo>/addons/<name>) that
+                   has its own ci/efficiency/gd-perf-hot.txt, with that repository's hot list,
+                   cold names and baseline. Its ratchet is its own: --update/--init never write
+                   there (run them in the addon repository). --no-addons skips, --addons forces.
+  addons/<x>/*.gd  a glob under addons/ matches the files under the links, so a game can hot-list
+                   addon code it calls per tick. Those keys ratchet in the game's own
+                   ci/efficiency/gd-perf-addons.tsv (--init writes it when missing, --update lowers it).
+
 A justified exception is a trailing `# perf-lint: allow <kind> <reason>` on the line (any
 kind when <kind> is `all`). Everything else is the ratchet in ci/efficiency/gd-perf.tsv: a
 new key or a higher count fails, --update only lowers. It is a text scan without types, so
 it is a guard for new code, not a proof.
 """
+import argparse
 import fnmatch
 import os
 import re
@@ -70,7 +82,12 @@ DICT_DECL = re.compile(r"\b(\w+)\s*(?::\s*Dictionary\b|:=\s*(?:\{|Dictionary\s*\
 BARE_ARRAY = re.compile(r"(?::|->)\s*(?:Array|Dictionary)\b(?!\s*\[)")
 
 
-def read_hot(path):
+ADDON_BASELINE = "ci/efficiency/gd-perf-addons.tsv"
+HOT_FILE = "ci/efficiency/gd-perf-hot.txt"
+
+
+def read_hot(path, opts=None):
+    """(globs, cold regex); opts, when given, collects the `addons:` directive."""
     globs, cold, extra = [], DEFAULT_COLD, []
     if not os.path.isfile(path):
         return globs, re.compile(cold)
@@ -79,7 +96,10 @@ def read_hot(path):
             ln = ln.split("#", 1)[0].strip()
             if not ln:
                 continue
-            if ln.startswith("cold+:"):
+            if ln.startswith("addons:"):
+                if opts is not None:
+                    opts["addons"] = ln[7:].strip()
+            elif ln.startswith("cold+:"):
                 extra.append(ln[6:].strip())
             elif ln.startswith("cold:"):
                 cold = ln[5:].strip()
@@ -243,16 +263,70 @@ def scan_file(rel, lines, cold):
     return cur
 
 
-def measure(root, hot_path):
+def measure(root, hot_path, files=None):
     globs, cold = read_hot(hot_path)
     cur = {}
     if not globs:
         return cur
-    for rel in effgate.gd_files(root):
+    for rel in effgate.gd_files(root) if files is None else files:
         if not any(fnmatch.fnmatch(rel, g) for g in globs):
             continue
         cur.update(scan_file(rel, effgate.read_lines(root, rel), cold))
     return cur
+
+
+def linked_files(root):
+    """The .gd files under root/addons/ that git does not track (the addon links), as addons/... paths."""
+    base = os.path.join(root, "addons")
+    if not os.path.isdir(base):
+        return []
+    tracked = set(effgate.gd_files(root))
+    seen, out = set(), []
+    for d, dirs, files in os.walk(base, followlinks=True):
+        real = os.path.realpath(d)
+        if real in seen:
+            dirs[:] = []
+            continue
+        seen.add(real)
+        dirs[:] = sorted(x for x in dirs if x not in effgate.SKIP_DIRS)
+        for f in files:
+            rel = os.path.relpath(os.path.join(d, f), root).replace(os.sep, "/")
+            if f.endswith(".gd") and rel not in tracked:
+                out.append(rel)
+    return sorted(out)
+
+
+def linked_repos(root):
+    """[(addon dir name, repository root)] for each root/addons/<name> link into <repo>/addons/<name>,
+    one per repository, the project itself excluded."""
+    base = os.path.join(root, "addons")
+    if not os.path.isdir(base):
+        return []
+    out, seen = [], {os.path.realpath(root)}
+    for name in sorted(os.listdir(base)):
+        link = os.path.join(base, name)
+        if not os.path.islink(link) or not os.path.isdir(link):
+            continue
+        real = os.path.realpath(link)
+        if os.path.basename(os.path.dirname(real)) != "addons":
+            continue
+        repo = os.path.dirname(os.path.dirname(real))
+        if repo not in seen:
+            seen.add(repo)
+            out.append((name, repo))
+    return out
+
+
+def gate(a, cur, label, baseline, writable=True):
+    """effgate.run_gate on one section with its own baseline file."""
+    b = argparse.Namespace(**vars(a))
+    b.baseline = baseline
+    if not writable:
+        b.update = b.init = False
+    if b.init and os.path.exists(baseline):
+        print("%s: kept %s (exists; --update shrinks it)" % (label, baseline))
+        return 0
+    return effgate.run_gate(b, cur, label, "sites")
 
 
 def by_file(cur):
@@ -271,11 +345,37 @@ def main():
     p = effgate.make_parser(__doc__.split("\n")[0], "ci/efficiency/gd-perf.tsv")
     p.add_argument("--hot", default=None, help="hot list (default: <dir>/ci/efficiency/gd-perf-hot.txt)")
     p.add_argument("--by-file", action="store_true", help="print totals per file and kind, then gate")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--addons", dest="linked", action="store_const", const=True, default=None,
+                   help="lint the linked addon repositories with their own hot lists (as `addons: linked`)")
+    g.add_argument("--no-addons", dest="linked", action="store_const", const=False,
+                   help="skip the linked addon repositories and the game's addons/ globs")
     a = p.parse_args()
-    cur = measure(a.dir, a.hot or os.path.join(a.dir, "ci/efficiency/gd-perf-hot.txt"))
+    hot = a.hot or os.path.join(a.dir, HOT_FILE)
+    opts = {}
+    globs = read_hot(hot, opts)[0]
+    linked = a.linked if a.linked is not None else opts.get("addons", "") == "linked"
+    cur = measure(a.dir, hot)
+    rc = gate(a, cur, "gd-perf", a.baseline or os.path.join(a.dir, a._default))
+    under = [x for x in globs if x.startswith("addons/")]
+    if under and a.linked is not False:
+        files = [f for f in linked_files(a.dir) if any(fnmatch.fnmatch(f, x) for x in under)]
+        mine = measure(a.dir, hot, files)
+        if mine or os.path.exists(os.path.join(a.dir, ADDON_BASELINE)):
+            cur.update(mine)
+            rc |= gate(a, mine, "gd-perf addons/", os.path.join(a.dir, ADDON_BASELINE))
+    if linked:
+        for _name, repo in linked_repos(a.dir):
+            own = os.path.join(repo, HOT_FILE)
+            if not os.path.isfile(own):
+                continue
+            theirs = measure(repo, own)
+            cur.update({"%s:%s" % (os.path.basename(repo), k): v for k, v in theirs.items()})
+            rc |= gate(a, theirs, "gd-perf %s" % os.path.basename(repo),
+                       os.path.join(repo, "ci/efficiency/gd-perf.tsv"), writable=False)
     if a.by_file:
         by_file(cur)
-    return effgate.run_gate(a, cur, "gd-perf", "sites")
+    return rc
 
 
 if __name__ == "__main__":

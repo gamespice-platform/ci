@@ -140,6 +140,8 @@ Before pushing new art from an addon that games vendor (zee-gs-weapons), run `py
 
 With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the game's `requires.floor.json` against the addon levels that lock pins (gs-core's `GSAddonApi.pinned_levels`, via `scripts/lock_pins.gd`, passed to `gs_requires.gd` as `--pin`): a floor above what that shell ships fails the pack. Without it nothing changes.
 
+`check-gd-perf.py` reads only tracked files, so a game's linked addons are invisible to its own hot list. An `addons: linked` line in the game's `ci/efficiency/gd-perf-hot.txt` lints every linked addon repository that has its own hot list, with that repository's hot list and baseline: a hit the addon already baselines passes, a new one fails the game too. `--update` and `--init` never write into an addon; shrink its baseline in its own repository. A glob under `addons/` in the game's hot list (`addons/x/x_tick.gd`) hot-lists addon code the game calls per tick; those keys ratchet in the game's `ci/efficiency/gd-perf-addons.tsv` (`--init` writes it when missing). `--no-addons` skips both, `--addons` forces the first.
+
 `resolve-deps.sh` wants a token only when it actually clones.
 
 | Script | What it does |

@@ -563,6 +563,56 @@ class GdPerf(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("more::string_build", out)
 
+    def _game_with_addon(self, game_hot):
+        """A game repository whose addons/gs_x links into a separate addon repository."""
+        addon = project({"addons/gs_x/hot_x.gd": GDP, "ci/efficiency/gd-perf-hot.txt": "addons/gs_x/hot*.gd\n"})
+        subprocess.run(["git", "init", "-q", addon], check=True)
+        subprocess.run(["git", "-C", addon, "add", "."], check=True)
+        game = project({"hot_g.gd": "func tick() -> void:\n\tpass\n", "ci/efficiency/gd-perf-hot.txt": game_hot})
+        subprocess.run(["git", "init", "-q", game], check=True)
+        subprocess.run(["git", "-C", game, "add", "."], check=True)
+        os.makedirs(os.path.join(game, "addons"))
+        os.symlink(os.path.join(addon, "addons/gs_x"), os.path.join(game, "addons/gs_x"))
+        return game, addon
+
+    def test_linked_addon_own_hot_list(self):
+        game, addon = self._game_with_addon("hot*.gd\n")
+        self.assertEqual(run("check-gd-perf.py", game)[0], 0)  # no `addons: linked`: the links are not read
+        with open(os.path.join(game, "ci/efficiency/gd-perf-hot.txt"), "a") as fh:
+            fh.write("addons: linked\n")
+        code, out = run("check-gd-perf.py", game)
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL gd-perf %s: addons/gs_x/hot_x.gd::tick::alloc" % os.path.basename(addon), out)
+        self.assertEqual(run("check-gd-perf.py", "--no-addons", game)[0], 0)
+        self.assertEqual(run("check-gd-perf.py", "--init", addon)[0], 0)  # the addon's own ratchet
+        self.assertEqual(run("check-gd-perf.py", game)[0], 0)
+        with open(os.path.join(addon, "addons/gs_x/hot_x.gd"), "a") as fh:
+            fh.write("\nfunc more(x) -> void:\n\tvar t := str(x)\n")
+        code, out = run("check-gd-perf.py", game)
+        self.assertEqual(code, 1)
+        self.assertIn("more::string_build", out)
+        tsv = os.path.join(addon, "ci/efficiency/gd-perf.tsv")
+        before = os.stat(tsv).st_mtime_ns
+        run("check-gd-perf.py", "--update", game)
+        self.assertEqual(os.stat(tsv).st_mtime_ns, before)  # never written from the game
+
+    def test_game_lists_addon_paths(self):
+        game, _ = self._game_with_addon("hot*.gd\naddons/gs_x/hot_x.gd\n")
+        code, out = run("check-gd-perf.py", game)
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL gd-perf addons/: addons/gs_x/hot_x.gd::tick::node_lookup", out)
+        self.assertNotIn("hot_g.gd", out)
+        code, out = run("check-gd-perf.py", "--init", game)  # own baseline is written; addons/ one too
+        self.assertEqual(code, 0)
+        self.assertTrue(os.path.isfile(os.path.join(game, "ci/efficiency/gd-perf-addons.tsv")))
+        self.assertEqual(run("check-gd-perf.py", "--init", game)[0], 0)  # both kept
+        self.assertEqual(run("check-gd-perf.py", game)[0], 0)
+        with open(os.path.join(game, "addons/gs_x/hot_x.gd"), "a") as fh:
+            fh.write("\nfunc more(x) -> void:\n\tvar t := str(x)\n")
+        code, out = run("check-gd-perf.py", game)
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL gd-perf addons/: addons/gs_x/hot_x.gd::more::string_build", out)
+
 
 if __name__ == "__main__":
     unittest.main()
