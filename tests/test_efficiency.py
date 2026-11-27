@@ -520,6 +520,9 @@ func tick(delta, n: int) -> void:
 \tfor i in n:
 \t\tchanged.emit(i)
 \tprint("ok")  # perf-lint: allow string_build once a match
+\tvar hit: Dictionary = {}
+\tvar normal: Vector3 = hit.get("normal", Vector3.ZERO)
+\tvar named: Variant = self.get("normal")
 
 func _process(delta: float) -> void:
 \tpass
@@ -537,8 +540,8 @@ class GdPerf(unittest.TestCase):
         self.assertEqual(code, 1)
         for k, n in (("<members>::untyped_var", 1), ("<members>::untyped_array", 1), ("_ready::no_return_type", 1),
                      ("_ready::untyped_var", 1), ("tick::untyped_param", 1), ("tick::untyped_var", 1),
-                     ("tick::node_lookup", 1), ("tick::alloc", 2), ("tick::string_build", 1),
-                     ("tick::dynamic_call", 2), ("tick::singleton_lookup", 1), ("tick::emit_in_loop", 1),
+                     ("tick::node_lookup", 1), ("tick::alloc", 3), ("tick::string_build", 1),
+                     ("tick::dynamic_call", 3), ("tick::singleton_lookup", 1), ("tick::emit_in_loop", 1),
                      ("_process::empty_process", 1)):
             self.assertIn("hot_a.gd::%s %d " % (k, n), out)
         self.assertNotIn("_ready::node_lookup", out)  # _ready is cold

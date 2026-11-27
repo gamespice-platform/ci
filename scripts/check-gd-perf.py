@@ -22,7 +22,8 @@ Kinds, counted per function (key `path::func::kind`, count = sites, as check-fra
     string_build     print*, str(), .format(), "..." % x, + "..." unless an enclosing `if`
                      names a debug/verbose/log/trace flag
     dynamic_call     call/callv/call_deferred, has_method, get/set by string, Callable(), .bind(),
-                     emit_signal
+                     emit_signal (a get/set on a name declared Dictionary in the file is a hash
+                     lookup, not a property by name, and is not counted)
     singleton_lookup Engine.get_singleton, get_world_3d(), .direct_space_state, get_tree(),
                      ProjectSettings.get_setting
     emit_in_loop     a signal .emit( inside a for/while body (batch it)
@@ -65,6 +66,7 @@ GUARD = re.compile(r"^\s*(?:el)?if\b.*(?:debug|verbose|log|trace|dbg|print|probe
 ALLOW = re.compile(r"#\s*perf-lint:\s*allow\s+(\w+)")
 VAR = re.compile(r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:static\s+)?var\s+\w+\s*(.*)$")
 FUNC_HEAD = re.compile(r"^\s*(?:static\s+)?func\s+(\w+)\s*\(")
+DICT_DECL = re.compile(r"\b(\w+)\s*(?::\s*Dictionary\b|:=\s*(?:\{|Dictionary\s*\())")
 BARE_ARRAY = re.compile(r"(?::|->)\s*(?:Array|Dictionary)\b(?!\s*\[)")
 
 
@@ -166,8 +168,20 @@ def in_loop(lines, a, i):
     return False
 
 
+def dict_names(lines):
+    """Names a var, member or parameter in the file declares as a Dictionary (typed or not)."""
+    names = set()
+    for raw in lines:
+        code = effgate.code_of(raw)
+        if "Dictionary" in code or "{" in code:
+            names.update(DICT_DECL.findall(code))
+    return names
+
+
 def scan_file(rel, lines, cold):
     cur = {}
+    dicts = dict_names(lines)
+    dict_get = re.compile(r"\b(?:%s)\.(?:get|set)\s*\(" % "|".join(map(re.escape, sorted(dicts)))) if dicts else None
 
     def add(func, kind, raw):
         if allowed(raw, kind):
@@ -211,7 +225,8 @@ def scan_file(rel, lines, cold):
             continue
         name, a, b = fn
         for kind, rx in HOT_PATTERNS:
-            if rx.search(code):
+            probe = dict_get.sub("_dict_(", code) if kind == "dynamic_call" and dict_get else code
+            if rx.search(probe):
                 if kind == "alloc" and VAR.match(code) is None and re.search(r"\b(?:const|enum)\b", code):
                     continue
                 if kind == "string_build" and guarded(lines, a, i):
