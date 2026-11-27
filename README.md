@@ -155,6 +155,10 @@ A reusable workflow in a private repository can only be called by repositories o
 
 ## Used by
 
+### Zee's Games
+
+Zee's Games is a collection of games I made on GameSpice, for demonstration and for fun. They show what the platform can do, and they run on live servers you can join. Anybody can create games on GameSpice, and everything in the family is its own repository and can be used separately from the games.
+
 Every repository in the family, the games and the addons alike, calls these workflows from its own `ci.yml`, so a game cannot ship without passing them. It is not vendored into `addons/`. The whole collection is at [zeesgames.com](https://zeesgames.com).
 
 ## Licence
