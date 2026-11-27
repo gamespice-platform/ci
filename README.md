@@ -1,5 +1,7 @@
 The checks and release packaging that every project in the [GameSpice](https://github.com/gamespice-platform) family shares. It is three reusable GitHub Actions workflows (`validate`, `release` and `release-maps`) and a set of shell and Python scripts. A repository adds about twenty lines of workflow and needs to know nothing else. Fixing a check is one commit here, not one per repository.
 
+This is the shared CI of the GameSpice family, MIT licensed and built with Claude Code. Its own scripts have Python tests under `tests/`. The games in [Zee's Games](https://zeesgames.com) run on live servers, and every one of them is checked and released by these workflows.
+
 ## First 10 minutes
 
 1. Add the `ci.yml` below to your repository.
@@ -151,9 +153,9 @@ With `--pack`, `--host-lock <shell addons.lock>` (or `HOST_LOCK=`) judges the ga
 
 A reusable workflow in a private repository can only be called by repositories of the same account. The family has two owners, so a private gs-ci would serve only half of it. Nothing here is secret: it is YAML and scripts, and every credential arrives from the caller.
 
-## Status
+## Used by
 
-Built and maintained with Claude Code. The checks run on every repository in the family, but little of this has been in front of outside users yet. Please report rough edges by opening an issue.
+Every repository in the family, the games and the addons alike, calls these workflows from its own `ci.yml`, so a game cannot ship without passing them. It is not vendored into `addons/`. The whole collection is at [zeesgames.com](https://zeesgames.com).
 
 ## Licence
 
