@@ -256,6 +256,10 @@ jobs:
                   for g in size frame-hazards duplication; do
                       python3 gs-ci/scripts/check-$g.py project || exit 1
                   done
+                  # Opt-in: only a repository that lists its hot scripts is held to the GDScript practices.
+                  if [ -f project/ci/efficiency/gd-perf-hot.txt ]; then
+                      python3 gs-ci/scripts/check-gd-perf.py project || exit 1
+                  fi
 
             - name: Hygiene gates (comments, generated files, web size, logging, markdown wrap, suite checks)
               if: inputs.hygiene

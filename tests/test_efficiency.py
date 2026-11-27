@@ -498,5 +498,68 @@ class PerfBudget(unittest.TestCase):
             del os.environ["PERF_HOST"]
 
 
+GDP_HOT = "hot*.gd\n"
+GDP = """var loose = 1
+var fine := 2
+var list: Array = []
+
+func _ready():
+\tvar a = $Child
+\tprint("ready")
+
+func tick(delta, n: int) -> void:
+\tvar kids = get_node("Kids")
+\tvar d := {"a": 1}
+\tvar s := "n=%d" % n
+\tif debug_log:
+\t\tprint("guarded")
+\tif has_method(&"x"):
+\t\tcall("x")
+\tvar q := PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ONE)
+\tvar w := get_world_3d().direct_space_state
+\tfor i in n:
+\t\tchanged.emit(i)
+\tprint("ok")  # perf-lint: allow string_build once a match
+
+func _process(delta: float) -> void:
+\tpass
+"""
+
+
+class GdPerf(unittest.TestCase):
+    def test_opt_in(self):
+        d = project({"hot_a.gd": GDP})
+        self.assertEqual(run("check-gd-perf.py", d)[0], 0)  # no hot list: nothing scanned
+
+    def test_kinds(self):
+        d = project({"hot_a.gd": GDP, "cold_b.gd": GDP, "ci/efficiency/gd-perf-hot.txt": GDP_HOT})
+        code, out = run("check-gd-perf.py", d)
+        self.assertEqual(code, 1)
+        for k, n in (("<members>::untyped_var", 1), ("<members>::untyped_array", 1), ("_ready::no_return_type", 1),
+                     ("_ready::untyped_var", 1), ("tick::untyped_param", 1), ("tick::untyped_var", 1),
+                     ("tick::node_lookup", 1), ("tick::alloc", 2), ("tick::string_build", 1),
+                     ("tick::dynamic_call", 2), ("tick::singleton_lookup", 1), ("tick::emit_in_loop", 1),
+                     ("_process::empty_process", 1)):
+            self.assertIn("hot_a.gd::%s %d " % (k, n), out)
+        self.assertNotIn("_ready::node_lookup", out)  # _ready is cold
+        self.assertNotIn("cold_b.gd", out)
+        self.assertNotIn("_process::untyped_param", out)
+        with open(os.path.join(d, "ci/efficiency/gd-perf-hot.txt"), "a") as fh:
+            fh.write("cold+: tick\n")
+        out = run("check-gd-perf.py", d)[1]
+        self.assertNotIn("tick::node_lookup", out)  # named cold: typing only
+        self.assertIn("tick::untyped_param", out)
+
+    def test_baseline(self):
+        d = project({"hot_a.gd": GDP, "ci/efficiency/gd-perf-hot.txt": GDP_HOT})
+        self.assertEqual(run("check-gd-perf.py", "--init", d)[0], 0)
+        self.assertEqual(run("check-gd-perf.py", d)[0], 0)
+        with open(os.path.join(d, "hot_a.gd"), "a") as fh:
+            fh.write("\nfunc more(x) -> void:\n\tvar t := str(x)\n")
+        code, out = run("check-gd-perf.py", d)
+        self.assertEqual(code, 1)
+        self.assertIn("more::string_build", out)
+
+
 if __name__ == "__main__":
     unittest.main()
