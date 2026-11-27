@@ -56,7 +56,8 @@ check_ident() {   # $1 = GIT_AUTHOR_IDENT | GIT_COMMITTER_IDENT
 # The efficiency gates CI runs ("Efficiency gates (baselines only shrink)"), run here on every commit
 # pushed to main, so a function over 80 lines or a file over 800 is refused before it turns CI red.
 # Only in repositories whose pushed commit has ci/efficiency/size.tsv; the .gd files and baselines of
-# that commit are exported (not the working tree), and gs-ci's own scripts check them.
+# that commit are exported (not the working tree), and gs-ci's own scripts check them. check-gd-perf.py
+# scans only what ci/efficiency/gd-perf-hot.txt lists, so it passes in a repository that has not opted in.
 # Versioned in gs-ci (scripts/owner-identity-hook, tests/test_owner_hook.py); install with
 #   sudo -u gamedev sudo install -m 755 scripts/owner-identity-hook /usr/local/lib/git-owner-hooks/owner-identity-hook
 # A push is refused only for a violation it adds: a no-op push and a push that changes no .gd file or
@@ -98,7 +99,7 @@ debt_match() {
 import os, re, sys
 tmp, was, now = sys.argv[1:4]
 BASE = {"size.tsv": "size", "frame-hazards.tsv": "frame-hazards", "duplication.tsv": "duplication",
-        "cross-duplication.tsv": "duplication (cross-game)"}
+        "cross-duplication.tsv": "duplication (cross-game)", "gd-perf.tsv": "gd-perf"}
 FAIL = re.compile(r"^FAIL (.+?): (\S+) (\d+) ")
 
 
@@ -193,7 +194,7 @@ check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unkno
     old_ok=
     [ -n "$old" ] && git cat-file -e "$old:ci/efficiency/size.tsv" 2>/dev/null && export_tree "$old" "$tmp/old" && old_ok=1
     out=""; known=""; warn=""
-    for g in size frame-hazards duplication cross; do
+    for g in size frame-hazards duplication cross gd-perf; do
         f=$(run_gate "$tmp/new" $g "$tmp/touched"); r=$?
         [ $r = 0 ] && continue
         [ $r = 2 ] && { warn="$warn$f
@@ -221,7 +222,7 @@ check_gates() {   # $1 = sha being pushed, $2 = the remote's sha (zeros or unkno
     if [ -n "$out" ]; then
         echo "pre-push: refusing, $(git rev-parse --short "$sha") adds failures to the efficiency gates CI runs on main:" >&2
         printf '%s' "$out" | sed '/^$/d; s/^/  /' | head -20 >&2
-        echo "Fix: split the function/file (never raise a baseline); check with python3 $GATE_SCRIPTS/check-size.py . (and check-frame-hazards.py, check-duplication.py [--siblings $GATE_SIBLINGS])." >&2
+        echo "Fix: split the function/file (never raise a baseline); check with python3 $GATE_SCRIPTS/check-size.py . (and check-frame-hazards.py, check-duplication.py [--siblings $GATE_SIBLINGS], check-gd-perf.py)." >&2
         echo "Code shared with another game goes in a GameSpice addon (index: $GATE_SIBLINGS/ADDONS.md); the game extends it." >&2
         return 1
     fi

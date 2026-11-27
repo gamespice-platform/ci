@@ -176,6 +176,29 @@ class OwnerHook(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("did not run", err)
 
+    def hot_tick(self, body):
+        self.write("ci/efficiency/gd-perf-hot.txt", "hot.gd\n")
+        self.write("hot.gd", "func tick(n: int) -> int:\n" + body + "\treturn n\n")
+        self.git("add", "-A")   # the gate lists tracked files
+
+    def test_gd_perf_new_violation_refused(self):
+        """A hot function that starts allocating per tick is refused like an over-long one."""
+        self.hot_tick("")
+        main = self.push_ok(self.commit("a clean hot script"), self.base)
+        self.hot_tick("\tvar d: Dictionary[int, int] = {}\n")
+        code, err = self.push(self.commit("allocates in the tick"), main)
+        self.assertEqual(code, 1, err)
+        self.assertIn("hot.gd::tick::alloc", err)
+
+    def test_gd_perf_baselined_debt_passes(self):
+        """gd-perf debt the baseline lists is not refused; only new or worse is."""
+        self.hot_tick("\tvar d: Dictionary[int, int] = {}\n")
+        self.assertEqual(subprocess.run(["python3", os.path.join(SCRIPTS, "check-gd-perf.py"), "--init", "."],
+                                        cwd=self.repo, capture_output=True).returncode, 0)
+        main = self.push_ok(self.commit("hot script with listed debt"), self.base)
+        self.write("a.gd", long_func("small", 12))
+        self.push_ok(self.commit("unrelated .gd change"), main)
+
     def test_new_branch_gates_unpushed_commits(self):
         self.write("b.gd", long_func("huge", 90))
         code, err = self.push(self.commit("first push of a branch to main"), ZERO)
