@@ -303,6 +303,19 @@ if [ "$PACK" -eq 1 ]; then
                 # that will not load from the pack. Said here, where it can be
                 # fixed, instead of on a player's machine where it cannot.
                 printf 'missing imported output: %s (from %s)\n' "$rel" "${marker#"$PACK_DIR"/}" >&2
+                # Godot names an output <file>-<md5 of the source's res:// path>. A marker
+                # whose hash is for another path was moved without being re-imported (a
+                # rename that kept the old dest_files): a fresh import writes the output
+                # under the NEW hash, so this marker can never be satisfied, and a checkout
+                # that still holds the old output passes locally and fails on a runner.
+                srcres="$(sed -n 's/^source_file="\(.*\)"$/\1/p' "$marker" | head -n 1)"
+                if [ -n "$srcres" ]; then
+                    want="$(basename "$srcres")-$(printf '%s' "$srcres" | md5sum | cut -c1-32)"
+                    case "$(basename "$rel")" in
+                        "$want".*) ;;
+                        *) printf '  stale marker: %s is named for another path; a fresh import writes %s.*, so fix path/dest_files in the .import\n' "$(basename "$rel")" "$want" >&2 ;;
+                    esac
+                fi
                 missing=$((missing + 1))
             fi
         done < <(grep -o 'res://\.godot/imported/[^"]*' "$marker" | sort -u)
